@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "job-wiki-research",
+      "name": "LLM-Wiki whole-vault research",
+      "profile": "wiki",
+      "schedule": "0 6 * * *",
+      "enabled": true,
+      "last_run": "2026-07-03T06:00:11-03:00",
+      "last_status": "ok",
+      "next_run": "2026-07-04T06:00:00-03:00",
+      "delivery": "telegram"
+    },
+    {
+      "id": "job-placement-audit",
+      "name": "Weekly placement audit",
+      "profile": "wiki",
+      "schedule": "0 7 * * 1",
+      "enabled": true,
+      "last_run": "2026-06-29T07:00:04-03:00",
+      "last_status": "ok",
+      "next_run": "2026-07-06T07:00:00-03:00",
+      "delivery": "telegram"
+    },
+    {
+      "id": "job-watchdog",
+      "name": "cron/gateway watchdog",
+      "profile": "ops",
+      "schedule": "*/15 * * * *",
+      "enabled": true,
+      "last_run": "2026-07-04T11:45:02-03:00",
+      "last_status": "ok",
+      "next_run": "2026-07-04T12:00:00-03:00",
+      "delivery": "file"
+    },
+    {
+      "id": "job-steward",
+      "name": "A+ LLM-Wiki structural steward",
+      "profile": "wiki",
+      "schedule": "30 5 * * *",
+      "enabled": true,
+      "last_run": "2026-07-04T05:30:09-03:00",
+      "last_status": "ok",
+      "next_run": "2026-07-05T05:30:00-03:00",
+      "delivery": "telegram"
+    },
+    {
+      "id": "job-memory-distill",
+      "name": "memory distillation",
+      "profile": "default",
+      "schedule": "15 4 * * *",
+      "enabled": true,
+      "last_run": "2026-07-04T04:15:20-03:00",
+      "last_status": "error",
+      "next_run": "2026-07-05T04:15:00-03:00",
+      "delivery": "file"
+    },
+    {
+      "id": "job-source-digest",
+      "name": "research-source approval digest",
+      "profile": "wiki",
+      "schedule": "0 20 * * *",
+      "enabled": true,
+      "last_run": "2026-07-03T20:00:07-03:00",
+      "last_status": "ok",
+      "next_run": "2026-07-04T20:00:00-03:00",
+      "delivery": "telegram"
+    },
+    {
+      "id": "job-selfimprove",
+      "name": "self-improvement loop",
+      "profile": "selfimprove",
+      "schedule": "0 3 * * 0",
+      "enabled": true,
+      "last_run": "2026-06-28T03:00:31-03:00",
+      "last_status": "ok",
+      "next_run": "2026-07-05T03:00:00-03:00",
+      "delivery": "telegram"
+    },
+    {
+      "id": "job-eir-draft",
+      "name": "camera-lens draft: EIR preset research digest",
+      "profile": "camera-lens",
+      "schedule": "0 9 * * 6",
+      "enabled": false,
+      "last_run": "2026-06-27T09:00:12-03:00",
+      "last_status": "ok",
+      "next_run": "",
+      "delivery": "telegram"
+    }
+  ]
+}

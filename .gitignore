@@ -1,0 +1,23 @@
+# generated output
+dist/
+/*.out
+/*.log
+digest-live*.md
+android-native/app/src/main/assets/llm-wiki-graph.html
+
+# python
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+
+# Android generated/local build material
+android-native/build/
+android-native/build-tools/
+android-native/hermes-os-debug.keystore
+*.apk
+*.idsig
+
+# local scratch
+.tmp/
+.state*/

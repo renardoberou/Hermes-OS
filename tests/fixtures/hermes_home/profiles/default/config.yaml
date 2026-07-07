@@ -1,0 +1,7 @@
+name: default
+model: hermes-4-405b
+alias: H
+description: primary gateway owner
+gateway: running
+api_key: sk-or-v1-f4kef4kef4kef4kef4kef4kef4kef4ke
+telegram_bot_token: 8123456789:AAf4keF4kef4keF4kef4keF4kef4keF4kef

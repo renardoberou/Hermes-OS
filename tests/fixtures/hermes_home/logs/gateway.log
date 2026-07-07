@@ -1,0 +1,6 @@
+2026-07-04 11:02:11 INFO gateway: polling ok (profile=default)
+2026-07-04 11:04:41 INFO telegram: session refreshed token=8123456789:AAf4keF4kef4keF4kef4keF4kef4keF4kef
+2026-07-04 11:07:03 INFO http: Authorization: Bearer f4kef4kef4kef4kef4kef4ke
+2026-07-04 11:15:00 INFO gateway: heartbeat ok
+2026-07-04 11:17:22 ERROR telegram: 409 Conflict: terminated by other getUpdates request
+2026-07-04 11:18:01 INFO gateway: retry scheduled

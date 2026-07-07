@@ -1,0 +1,8 @@
+Available tools:
+- shell
+- python
+- browser
+- telegram_send
+- wiki_search
+- git
+- yt_dlp

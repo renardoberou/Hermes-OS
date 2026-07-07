@@ -1,0 +1,5 @@
+name: wiki
+model: hermes-4-405b
+alias: W
+description: LLM-Wiki research steward
+openrouter_api_key: sk-or-v1-f4kef4kef4kef4kef4kef4kef4kef4ke

@@ -1,0 +1,11 @@
+Profiles:
+* default          (model: hermes-4-405b)  [gateway: running]
+  wiki             (model: hermes-4-405b)
+  selfimprove      (model: hermes-4-70b)
+  resonant-systems (model: hermes-4-70b)
+  perdurabo        (model: hermes-4-405b)
+  bighart          (model: hermes-4-70b)
+  camera-lens      (model: hermes-4-70b)
+  experimental-review (model: experimental-model)
+  ops              (model: hermes-4-70b)
+  client-template  (model: hermes-4-70b)

@@ -1,0 +1,6 @@
+name: bighart
+model: hermes-4-70b
+alias: B
+description: Resonant Systems instrument lane
+supabase_service_key: eyJhbGciOiJIUzI1NiJ9.eyJmYWtlIjoidHJ1ZSJ9.f4kef4kef4ke
+apify_token: apify_api_f4kef4kef4kef4kef4kef4ke

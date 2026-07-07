@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes-os"
+version = "0.1.0"
+description = "Phone-first, read-only control plane for a Hermes Agent setup on Android/Termux"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Renardo Berou / Resonant Systems" }]
+
+# No dependencies, by design: Python stdlib only.
+
+[project.scripts]
+hermes-os = "hermes_os.cli:main"
+
+[tool.setuptools]
+packages = ["hermes_os"]
