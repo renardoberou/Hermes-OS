@@ -182,13 +182,43 @@ class TestDecisionBridge(unittest.TestCase):
         approved = self._approval(status="approved")
         inv = collect(self.cfg)
         html = render_dashboard(inv)
-        self.assertIn("Native Decision Bridge v0.4.0", html)
+        self.assertIn("Native Decision Bridge v0.4.1", html)
         self.assertIn(f"hermesos://decision?id={pending.id}&amp;verb=approve", html)
         self.assertIn(f"hermesos://decision?id={pending.id}&amp;verb=reject", html)
         self.assertIn(f"hermesos://apply?id={approved.id}&amp;mode=dry-run", html)
         self.assertIn(f"hermesos://apply?id={approved.id}&amp;mode=execute", html)
         self.assertIn("hermesos://system?verb=refresh", html)
         self.assertIn("Last action", html)
+
+    def test_android_service_pathless_environment_uses_absolute_hermes_os_binary(self):
+        item = self._approval(status="approved", command="hermes-os render-html")
+        argv = self.bridge.execution_command_for(["hermes-os", "render-html"])
+        self.assertNotEqual(argv[0], "hermes-os")
+        self.assertTrue(argv[0].endswith("/hermes-os"))
+
+        apply_argv = self.bridge.apply.execution_argv(item.suggested_command)
+        self.assertNotEqual(apply_argv[0], "hermes-os")
+        self.assertTrue(apply_argv[0].endswith("/hermes-os"))
+
+    def test_derived_daybook_action_can_be_queued_as_pending_approval(self):
+        inv = collect(self.cfg)
+        derived = inv.action_center.get("derived_actions", [])
+        self.assertTrue(derived, "fixture should expose daybook/next-action candidates")
+        candidate = derived[0]
+
+        result = self.bridge.dispatch(candidate["id"], "queue", source="test")
+        self.assertEqual(result.status, "ok", result.reason)
+        self.assertIn("approval queued", result.reason)
+        pending_titles = [a.title for a in self.queue.list(status="pending")]
+        self.assertIn(candidate["title"], pending_titles)
+
+    def test_dashboard_renders_daybook_and_next_action_queue_buttons(self):
+        inv = collect(self.cfg)
+        html = render_dashboard(inv)
+        self.assertIn("Action candidates", html)
+        self.assertIn("Queue approval", html)
+        self.assertIn("hermesos://decision?id=drv-", html)
+        self.assertIn("verb=queue", html)
 
     def test_android_bridge_declares_run_command_and_structured_handlers(self):
         manifest = (REPO / "android-native/app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
@@ -200,6 +230,7 @@ class TestDecisionBridge(unittest.TestCase):
         self.assertIn("handleSystemUrl", java)
         self.assertIn('"approve"', java)
         self.assertIn('"reject"', java)
+        self.assertIn('"queue"', java)
         self.assertIn('"dry-run"', java)
         self.assertIn('"execute"', java)
         self.assertIn("RUN_COMMAND_PERMISSION", java)

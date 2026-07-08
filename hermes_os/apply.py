@@ -105,6 +105,18 @@ class GuardedApply:
         except ValueError:
             return []
 
+    def execution_argv(self, command: str) -> list[str]:
+        """Return argv for subprocess execution under Android RunCommandService.
+
+        Termux plugin execution does not put ~/.local/bin on PATH. Keep the
+        approval's display/audit command as `hermes-os ...`, but execute via the
+        configured absolute wrapper when the first token is hermes-os.
+        """
+        argv = self.command_argv(command)
+        if argv and argv[0] == "hermes-os":
+            argv = [str(Path(self.cfg.hermes_os_bin).expanduser()), *argv[1:]]
+        return argv
+
     def is_allowlisted(self, command: str) -> bool:
         argv = self.command_argv(command)
         if tuple(argv) in _ALLOWED_EXACT:
@@ -194,7 +206,7 @@ class GuardedApply:
             )
             return self._append_log(result)
 
-        argv = self.command_argv(item.suggested_command)
+        argv = self.execution_argv(item.suggested_command)
         try:
             proc = subprocess.run(
                 argv,

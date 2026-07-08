@@ -16,7 +16,7 @@ A local CLI, `hermes-os`, with three renderings of one read-mostly inventory, ob
 2. **`digest`** — the same inventory compressed into a Telegram-friendly Markdown message opening with `Aye, Captain — Hermes Android Agentic OS status`.
 3. **`render-html`** — a static, phone-first dashboard (`dist/index.html`) with sections for Now, Daybook, Kanban/live agents, Health, Cron jobs, Profiles, Approvals, Action Center, LLM-Wiki, Skills/Automations, Projects, Risks, and Next actions.
 4. **`approvals`** — a local queue file recording proposed changes (title, kind, detail, risk level, status, optional suggested command and rollback). The product records, displays, and can write a manual script.
-5. **`action`** — Native Decision Bridge v0.4.0: `action <id> --verb approve|reject|dry-run|execute|done` plus `action system --verb refresh`, used by Android buttons and recorded in `action-receipts.jsonl`.
+5. **`action`** — Native Decision Bridge v0.4.1: `action <id> --verb approve|reject|queue|dry-run|execute|done` plus `action system --verb refresh`, used by Android buttons and recorded in `action-receipts.jsonl`.
 6. **`history` / `trend`** — compact local JSONL audit snapshots and terminal trend summaries.
 7. **`apply`** — Guarded Apply v0.1: dry-run by default; `--execute` requires approved status, non-stale timestamp, low/medium risk, rollback metadata, exact allowlist match, and writes a hash-chained local action log.
 

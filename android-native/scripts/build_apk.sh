@@ -8,8 +8,8 @@ AAPT_ANDROID_JAR="${AAPT_ANDROID_JAR:-$ROOT/build-tools/android-sdk/android-9/an
 JAVAC_ANDROID_JAR="${JAVAC_ANDROID_JAR:-$ROOT/build-tools/android-sdk/android-9/android.jar}"
 R8_JAR="$ROOT/build-tools/r8.jar"
 PKG="com.resonantsystems.hermesos"
-VERSION_NAME="0.4.0"
-VERSION_CODE="5"
+VERSION_NAME="0.4.1"
+VERSION_CODE="6"
 TARGET_SDK="28"
 
 rm -rf "$BUILD"

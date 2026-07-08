@@ -429,6 +429,28 @@ def _sec_approvals(inv: Inventory) -> str:
     return _section("7 · Approvals", head + _ul(items, "queue is empty"))
 
 
+
+def _derived_action_rows(inv: Inventory, *, kind_prefix: str = "", max_items: int = 8) -> list[str]:
+    rows = []
+    for item in (inv.action_center or {}).get("derived_actions", []) or []:
+        kind = str(item.get("kind", ""))
+        if kind_prefix and not kind.startswith(kind_prefix):
+            continue
+        item_id = str(item.get("id", ""))
+        if not item_id:
+            continue
+        rows.append(
+            f'<span class="row-title">{_e(item.get("title", item_id))}</span>{_pill("warn")}'
+            f'<span class="row-sub">{_e(kind)} · {_e(item.get("source", ""))} · {_e(item.get("detail", "")[:140])}</span>'
+            + _tap_actions([
+                _bridge_link("decision", "Queue approval", id=item_id, verb="queue", css="tap ok"),
+                _app_link("copy", "Copy title", text=str(item.get("title", ""))),
+            ])
+        )
+        if len(rows) >= max_items:
+            break
+    return rows
+
 def _sec_action_center(inv: Inventory) -> str:
     action = inv.action_center or {}
     trend = action.get("audit_trend", {}) or {}
@@ -512,19 +534,22 @@ def _sec_action_center(inv: Inventory) -> str:
         )
 
     items = [
-        quick_actions + f'<span class="row-title">Native Decision Bridge v0.4.0</span><span class="row-sub">structured buttons: Approve · Reject · Dry run · Execute · Refresh. URLs carry ids/verbs only, not shell commands.</span>',
+        quick_actions + f'<span class="row-title">Native Decision Bridge v0.4.1</span><span class="row-sub">structured buttons: Approve · Reject · Dry run · Execute · Refresh. URLs carry ids/verbs only, not shell commands.</span>',
         f'<span class="row-title">Action receipts</span><span class="row-sub">{_e(receipt_file or "action-receipts.jsonl")}</span>',
         f'<span class="row-title">Public dashboard mirror</span><span class="row-sub">{_e(public_file or "/storage/emulated/0/Documents/HermesOS/index.html")}</span>',
         f'<span class="row-title">Action scripts</span><span class="row-sub">{_e(script_dir or "dist/actions")}</span>',
         f'<span class="row-title">Audit trail</span><span class="row-sub">{_e(history_file or "history.jsonl")}</span>',
         f'<span class="row-title">Apply log</span><span class="row-sub">{_e(apply_log_file or "apply-log.jsonl")}</span>',
-        '<span class="row-title">CLI bridge</span><span class="row-sub">hermes-os action &lt;id&gt; --verb approve|reject|dry-run|execute|done · hermes-os action system --verb refresh</span>',
+        '<span class="row-title">CLI bridge</span><span class="row-sub">hermes-os action &lt;id&gt; --verb approve|reject|queue|dry-run|execute|done · hermes-os action system --verb refresh</span>',
         '<span class="row-title">Guarded Apply v0.1</span><span class="row-sub">dry-run: hermes-os apply &lt;id&gt; · execute: hermes-os apply &lt;id&gt; --execute · execute still requires approval, freshness, rollback metadata, risk ceiling, and exact allowlist.</span>',
     ]
     if pending_items:
         items.append('<span class="row-title">Pending decisions</span>' + _ul(pending_items, "no pending decisions"))
     if apply_items:
         items.append('<span class="row-title">Approved apply candidates</span>' + _ul(apply_items, "no approved apply candidates"))
+    derived_items = _derived_action_rows(inv, max_items=10)
+    if derived_items:
+        items.append('<span class="row-title">Action candidates</span><span class="row-sub">Daybook Needs approval and Next actions can be queued into Pending Approvals first; queueing records intent but does not execute.</span>' + _ul(derived_items, "no action candidates"))
     allowed = guarded.get("allowed_commands", []) or []
     if allowed:
         items.append('<span class="row-title">Allowlist</span><span class="row-sub">' + _e(" · ".join(str(x) for x in allowed)) + '</span>')
@@ -588,7 +613,10 @@ def _sec_risks(inv: Inventory) -> str:
 
 
 def _sec_actions(inv: Inventory) -> str:
-    items = [_e(a) for a in inv.next_actions]
+    derived = _derived_action_rows(inv, kind_prefix="next-action", max_items=8)
+    used_titles = {str(item.get("title", "")) for item in (inv.action_center or {}).get("derived_actions", []) if str(item.get("kind", "")).startswith("next-action")}
+    plain = [_e(a) for a in inv.next_actions if str(a) not in used_titles]
+    items = derived + plain
     return _section("13 · Next actions", _ul(items, "nothing suggested"))
 
 

@@ -170,7 +170,7 @@ public class MainActivity extends Activity {
     private boolean handleDecisionUrl(Uri uri) {
         String id = uri.getQueryParameter("id");
         String verb = uri.getQueryParameter("verb");
-        if (!isSafeId(id) || !("approve".equals(verb) || "reject".equals(verb) || "done".equals(verb))) {
+        if (!isSafeId(id) || !("approve".equals(verb) || "reject".equals(verb) || "queue".equals(verb) || "done".equals(verb))) {
             Toast.makeText(this, "Refused invalid decision action", Toast.LENGTH_LONG).show();
             return true;
         }

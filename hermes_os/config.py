@@ -12,6 +12,7 @@ Environment overrides (all optional):
     HERMES_OS_STATE_DIR             default: <hermes_home>/state/hermes-android-agentic-os
     HERMES_OS_DIST_DIR              default: <repo>/dist
     HERMES_OS_HERMES_BIN            default: hermes
+    HERMES_OS_SELF_BIN              default: ~/.local/bin/hermes-os
     HERMES_OS_LOG_TAIL_LINES        default: 40
     HERMES_OS_HEARTBEAT_STALE_HOURS default: 26
     HERMES_OS_DISK_WARN_PCT         default: 90
@@ -73,6 +74,7 @@ class Config:
     state_dir: Path
     dist_dir: Path
     hermes_bin: str = "hermes"
+    hermes_os_bin: str = str(Path.home() / ".local" / "bin" / "hermes-os")
     log_tail_lines: int = 40
     heartbeat_stale_hours: float = 26.0
     disk_warn_pct: int = 90
@@ -157,6 +159,7 @@ class Config:
             state_dir=_env_path("STATE_DIR", state_default),
             dist_dir=_env_path("DIST_DIR", str(REPO_ROOT / "dist")),
             hermes_bin=_env("HERMES_BIN", "hermes"),
+            hermes_os_bin=_env("SELF_BIN", str(Path.home() / ".local" / "bin" / "hermes-os")),
             log_tail_lines=_env_int("LOG_TAIL_LINES", 40),
             heartbeat_stale_hours=_env_float("HEARTBEAT_STALE_HOURS", 26.0),
             disk_warn_pct=_env_int("DISK_WARN_PCT", 90),
@@ -175,6 +178,7 @@ class Config:
             "gateway_log": str(self.gateway_log),
             "errors_log": str(self.errors_log),
             "profiles_dir": str(self.profiles_dir),
+            "hermes_os_bin": str(self.hermes_os_bin),
             "approvals_file": str(self.approvals_file),
             "action_scripts_dir": str(self.action_scripts_dir),
             "history_file": str(self.history_file),
