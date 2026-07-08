@@ -15,6 +15,7 @@ from __future__ import annotations
 import html
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 
 from . import __version__
 from .models import Inventory
@@ -98,6 +99,14 @@ li{padding:5px 0;border-bottom:1px dotted rgba(154,135,104,.18);word-break:break
 li:last-child{border-bottom:0}
 .row-title{color:var(--text)}
 .row-sub{color:var(--dim);font-size:12px;display:block;margin-top:1px}
+.tap-actions{display:flex;flex-wrap:wrap;gap:8px;margin:9px 0 6px}
+.tap{
+  display:inline-block;min-height:38px;padding:8px 11px;border:1px solid var(--line);
+  border-radius:999px;background:rgba(255,180,84,.08);color:var(--amber);
+  text-decoration:none;font-size:12px;line-height:20px;
+}
+.tap:active{background:rgba(255,180,84,.22);transform:translateY(1px)}
+.tap.dim{color:var(--dim);background:transparent}
 .pill{
   display:inline-block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
   border:1px solid;border-radius:999px;padding:0 7px;margin-left:6px;vertical-align:1px;
@@ -127,7 +136,7 @@ a{color:var(--amber)}
 </header>
 <main class="wrap">
 {{SECTIONS}}
-<footer>read-only inventory · dashboard snapshots are regenerated locally<br>
+<footer>observe/propose · tap chips copy/open Termux; no command is auto-run<br>
 <a href="llm-wiki-graph.html">open LLM-Wiki graph view</a><br>
 <span class="rule">─────</span> hermes-os v{{VERSION}} <span class="rule">─────</span></footer>
 </main>
@@ -161,6 +170,29 @@ def _ul(items: list[str], empty: str) -> str:
     if not items:
         return f'<p class="empty">{_e(empty)}</p>'
     return "<ul>" + "".join(f"<li>{item}</li>" for item in items) + "</ul>"
+
+
+def _app_link(action: str, label: str, *, text: str = "", cmd: str = "", css: str = "tap") -> str:
+    """Return a WebView-interceptable no-JS action link.
+
+    The native Android shell handles hermesos://copy and hermesos://termux by
+    copying text to the clipboard, optionally opening Termux. In a normal
+    browser these still render as visible affordances; long-press/copy remains
+    the fallback.
+    """
+    params = []
+    if text:
+        params.append("text=" + quote(text))
+    if cmd:
+        params.append("cmd=" + quote(cmd))
+    href = f"hermesos://{action}" + ("?" + "&".join(params) if params else "")
+    return f'<a class="{_e(css)}" href="{_e(href)}">{_e(label)}</a>'
+
+
+def _tap_actions(items: list[str]) -> str:
+    if not items:
+        return ""
+    return '<div class="tap-actions" aria-label="tap actions">' + "".join(items) + "</div>"
 
 
 # ---- individual sections -------------------------------------------------
@@ -217,6 +249,80 @@ def _sec_today(inv: Inventory) -> str:
     return _section("2 · Daybook", inner)
 
 
+def _sec_kanban(inv: Inventory) -> str:
+    kanban = inv.kanban or {}
+    counts = kanban.get("counts", {}) or {}
+    active_agents = kanban.get("active_agents", []) or []
+    boards = kanban.get("boards", []) or []
+    head = _kv([
+        ("current board", _e(kanban.get("current_board", "—"))),
+        ("open tasks", _e(kanban.get("open_count", 0))),
+        ("running / blocked", _e(f"{counts.get('running', 0)} / {counts.get('blocked', 0)}")),
+        ("live agents", _e(len(active_agents))),
+    ])
+
+    agent_items = []
+    for agent in active_agents[:10]:
+        kind = agent.get("kind", "agent")
+        pid = agent.get("pid", "")
+        profile = agent.get("profile", "") or "—"
+        task = agent.get("task_id", "") or agent.get("board", "")
+        sub_bits = [f"{kind}", f"profile {profile}"]
+        if pid:
+            sub_bits.append(f"pid {pid}")
+        if task:
+            sub_bits.append(str(task))
+        if agent.get("heartbeat"):
+            sub_bits.append(f"heartbeat {agent.get('heartbeat')}")
+        agent_items.append(
+            f'<span class="row-title">{_e(agent.get("title", "live agent"))}</span>{_pill("ok")}'
+            f'<span class="row-sub">{_e(" · ".join(sub_bits))}</span>'
+        )
+
+    board_items = []
+    for board in boards[:8]:
+        bc = board.get("counts", {}) or {}
+        ready_count = int(bc.get("ready", 0) or 0) + int(bc.get("todo", 0) or 0) + int(bc.get("triage", 0) or 0)
+        parts = [
+            f"open {board.get('open_count', 0)}",
+            f"run {bc.get('running', 0)}",
+            f"ready {ready_count}",
+            f"blocked {bc.get('blocked', 0)}",
+            f"done {bc.get('done', 0)}",
+        ]
+        pill = _pill("ok" if board.get("slug") == kanban.get("current_board") else "dim")
+        board_items.append(
+            f'<span class="row-title">{_e(board.get("name", board.get("slug", "board")))}</span>{pill}'
+            f'<span class="row-sub">{_e(board.get("slug", ""))} · {_e(" · ".join(parts))}</span>'
+        )
+
+    task_items = []
+    for board in boards:
+        for task in (board.get("running", []) or [])[:4]:
+            task_items.append((board.get("slug", ""), task, "ok"))
+        for task in (board.get("blocked", []) or [])[:4]:
+            task_items.append((board.get("slug", ""), task, "warn"))
+        if len(task_items) >= 8:
+            break
+    task_html = []
+    for slug, task, status in task_items[:8]:
+        sub_bits = [slug, task.get("status", ""), task.get("assignee", "")]
+        if task.get("last_heartbeat_at"):
+            sub_bits.append(f"heartbeat {task.get('last_heartbeat_at')}")
+        if task.get("last_failure_error"):
+            sub_bits.append(str(task.get("last_failure_error")))
+        task_html.append(
+            f'<span class="row-title">{_e(task.get("title", task.get("id", "task")))}</span>{_pill(status)}'
+            f'<span class="row-sub">{_e(" · ".join(str(b) for b in sub_bits if b))}</span>'
+        )
+
+    inner = head
+    inner += '<h3 class="subhead">Live agents</h3>' + _ul(agent_items, "no live agent processes detected")
+    inner += '<h3 class="subhead">Boards</h3>' + _ul(board_items, "no Kanban boards found")
+    inner += '<h3 class="subhead">Running / blocked tasks</h3>' + _ul(task_html, "no running or blocked Kanban tasks")
+    return _section("3 · Kanban / live agents", inner)
+
+
 def _sec_health(inv: Inventory) -> str:
     items = []
     for c in inv.health:
@@ -235,7 +341,7 @@ def _sec_health(inv: Inventory) -> str:
             f'<span class="v">{d.used_pct}% of {d.total_gb} GB</span></div>'
             f'<div class="bar{hot}"><b style="width:{min(d.used_pct,100)}%"></b></div>'
         )
-    return _section("3 · Health", inner + bars)
+    return _section("4 · Health", inner + bars)
 
 
 def _sec_cron(inv: Inventory) -> str:
@@ -263,7 +369,7 @@ def _sec_cron(inv: Inventory) -> str:
             inv.cron.get("scheduler_running"), "unknown" + _pill("unknown"))),
         ("jobs", _e(f"{counts.get('enabled', 0)} enabled / {counts.get('total', 0)} total, {counts.get('failing', 0)} failing")),
     ])
-    return _section("4 · Cron jobs", head + _ul(items, "no jobs found"))
+    return _section("5 · Cron jobs", head + _ul(items, "no jobs found"))
 
 
 def _sec_profiles(inv: Inventory) -> str:
@@ -276,7 +382,7 @@ def _sec_profiles(inv: Inventory) -> str:
             f'<span class="row-title">{_e(p.name)}</span>{active}{gw}'
             f'<span class="row-sub">{_e(" · ".join(sub_bits))}</span>'
         )
-    return _section("5 · Profiles", _ul(items, "no profiles detected"))
+    return _section("6 · Profiles", _ul(items, "no profiles detected"))
 
 
 def _sec_approvals(inv: Inventory) -> str:
@@ -289,17 +395,83 @@ def _sec_approvals(inv: Inventory) -> str:
     for a in inv.approvals.get("pending", []):
         risk = a.get("risk_level", "medium")
         pill = _pill("risk" if risk == "high" else "warn" if risk == "medium" else "ok")
+        item_id = str(a.get("id", ""))
+        row_actions = _tap_actions([
+            _app_link("termux", "Show", cmd=f"hermes-os approvals show {item_id}"),
+            _app_link("copy", "Copy script cmd", text=f"hermes-os approvals script {item_id}"),
+        ]) if item_id else ""
         items.append(
             f'<span class="row-title">{_e(a.get("title", ""))}</span>{pill}'
-            f'<span class="row-sub">{_e(a.get("kind", ""))} · {_e(a.get("id", ""))} · {_e(a.get("detail", "")[:120])}</span>'
+            f'<span class="row-sub">{_e(a.get("kind", ""))} · {_e(item_id)} · {_e(a.get("detail", "")[:120])}</span>'
+            + row_actions
         )
-    return _section("6 · Approvals", head + _ul(items, "queue is empty"))
+    if not items:
+        head += _tap_actions([
+            _app_link("termux", "Open status", cmd="hermes-os status"),
+            _app_link("copy", "Copy add approval", text='hermes-os approvals add --title "..." --kind "..." --detail "..." --risk low'),
+        ])
+    return _section("7 · Approvals", head + _ul(items, "queue is empty"))
+
+
+def _sec_action_center(inv: Inventory) -> str:
+    action = inv.action_center or {}
+    trend = action.get("audit_trend", {}) or {}
+    latest = trend.get("latest", {}) or {}
+    guarded = action.get("guarded_apply", {}) or {}
+    guarded_status = guarded.get("status", "deferred")
+    guarded_pill = _pill("ok" if guarded.get("enabled") else "warn")
+    head = _kv([
+        ("audit samples", _e(trend.get("samples", 0))),
+        ("latest cron failing", _e(latest.get("cron_failing", "—"))),
+        ("latest approvals pending", _e(latest.get("approvals_pending", "—"))),
+        ("latest active agents", _e(latest.get("active_agents", "—"))),
+        ("guarded apply", _e(guarded_status) + guarded_pill),
+    ])
+    script_dir = action.get("action_scripts_dir", "")
+    history_file = action.get("history_file", "")
+    apply_log_file = action.get("apply_log_file", "")
+    quick_actions = _tap_actions([
+        _app_link("termux", "Status", cmd="hermes-os status"),
+        _app_link("termux", "Trend", cmd="hermes-os trend"),
+        _app_link("termux", "Refresh dashboard", cmd="hermes-os render-html"),
+        _app_link("copy", "Copy mirror path", text="/storage/emulated/0/Documents/HermesOS/index.html"),
+    ])
+    approved = inv.approvals.get("approved", []) or []
+    apply_items = []
+    for a in approved[:6]:
+        item_id = str(a.get("id", ""))
+        if not item_id:
+            continue
+        apply_items.append(
+            f'<span class="row-title">{_e(a.get("title", item_id))}</span>{_pill("ok")}'
+            f'<span class="row-sub">approved · dry-run first: hermes-os apply {_e(item_id)} · execute: hermes-os apply {_e(item_id)} --execute</span>'
+            + _tap_actions([
+                _app_link("termux", "Dry run", cmd=f"hermes-os apply {item_id}"),
+                _app_link("copy", "Copy execute", text=f"hermes-os apply {item_id} --execute"),
+            ])
+        )
+    items = [
+        quick_actions + f'<span class="row-title">Action scripts</span><span class="row-sub">{_e(script_dir or "dist/actions")}</span>',
+        f'<span class="row-title">Audit trail</span><span class="row-sub">{_e(history_file or "history.jsonl")}</span>',
+        f'<span class="row-title">Apply log</span><span class="row-sub">{_e(apply_log_file or "apply-log.jsonl")}</span>',
+        '<span class="row-title">Approval detail</span><span class="row-sub">tap approval Show button, or run: hermes-os approvals show &lt;id&gt;</span>',
+        '<span class="row-title">Manual script handoff</span><span class="row-sub">tap Copy script cmd, or run: hermes-os approvals script &lt;id&gt;</span>',
+        '<span class="row-title">Guarded Apply v0.1</span><span class="row-sub">dry-run: hermes-os apply &lt;id&gt; · execute: hermes-os apply &lt;id&gt; --execute</span>',
+    ]
+    if apply_items:
+        items.append('<span class="row-title">Approved apply candidates</span>' + _ul(apply_items, "no approved apply candidates"))
+    allowed = guarded.get("allowed_commands", []) or []
+    if allowed:
+        items.append('<span class="row-title">Allowlist</span><span class="row-sub">' + _e(" · ".join(str(x) for x in allowed)) + '</span>')
+    reason = guarded.get("reason", "guarded apply metadata unavailable")
+    items.append(f'<span class="row-title">Guard policy</span><span class="row-sub">{_e(reason)}</span>')
+    return _section("8 · Action Center", head + _ul(items, "no action-center metadata"))
 
 
 def _sec_wiki(inv: Inventory) -> str:
     w = inv.wiki
     if w is None or not w.exists:
-        return _section("7 · LLM-Wiki", f'<p class="empty">vault not reachable at {_e(w.root if w else "?")}</p>')
+        return _section("9 · LLM-Wiki", f'<p class="empty">vault not reachable at {_e(w.root if w else "?")}</p>')
     hb = "—"
     if w.heartbeat_age_hours is not None:
         hb = f"{w.heartbeat_age_hours}h ago" + (_pill("warn") if w.heartbeat_stale else _pill("ok"))
@@ -311,7 +483,7 @@ def _sec_wiki(inv: Inventory) -> str:
     if w.lint_status:
         pairs.append(("lint/audit", _e(w.lint_status)))
     log_items = [f'<span class="row-sub">{_e(entry)}</span>' for entry in w.recent_log]
-    return _section("7 · LLM-Wiki", _kv(pairs) + _ul(log_items, "no recent log entries"))
+    return _section("9 · LLM-Wiki", _kv(pairs) + _ul(log_items, "no recent log entries"))
 
 
 def _sec_skills(inv: Inventory) -> str:
@@ -328,7 +500,7 @@ def _sec_skills(inv: Inventory) -> str:
         promo_html = _kv([("promotion candidates", _e("; ".join(promo[:5])))])
     tools = inv.skills.get("tools", [])
     tools_html = _kv([("tools", _e(", ".join(tools[:20]) if tools else "—"))])
-    return _section("8 · Skills / Automations", _ul(items, "no automation lanes detected") + promo_html + tools_html)
+    return _section("10 · Skills / Automations", _ul(items, "no automation lanes detected") + promo_html + tools_html)
 
 
 def _sec_projects(inv: Inventory) -> str:
@@ -340,19 +512,19 @@ def _sec_projects(inv: Inventory) -> str:
             f'<span class="row-title">{_e(lane)}</span>'
             f'<span class="row-sub">profiles: {_e(profs)} · cron jobs: {jobs}</span>'
         )
-    return _section("9 · Projects", _ul(items, "no project lanes detected"))
+    return _section("11 · Projects", _ul(items, "no project lanes detected"))
 
 
 def _sec_risks(inv: Inventory) -> str:
     items = []
     for r in inv.risks:
         items.append(f"{_pill(r.level)} {_e(r.message)}")
-    return _section("10 · Risks", _ul(items, "none detected"))
+    return _section("12 · Risks", _ul(items, "none detected"))
 
 
 def _sec_actions(inv: Inventory) -> str:
     items = [_e(a) for a in inv.next_actions]
-    return _section("11 · Next actions", _ul(items, "nothing suggested"))
+    return _section("13 · Next actions", _ul(items, "nothing suggested"))
 
 
 def _lamps(inv: Inventory) -> str:
@@ -382,10 +554,12 @@ def render_dashboard(inv: Inventory, template_path: Optional[Path] = None) -> st
         for fn in (
             _sec_now,
             _sec_today,
+            _sec_kanban,
             _sec_health,
             _sec_cron,
             _sec_profiles,
             _sec_approvals,
+            _sec_action_center,
             _sec_wiki,
             _sec_skills,
             _sec_projects,

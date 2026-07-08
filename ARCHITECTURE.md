@@ -2,23 +2,24 @@
 
 ## Shape
 
-One pipeline, three renderings, one side-file:
+One pipeline, three renderings, and guarded side-files:
 
 ```
-                    read-only sources                      product state
+                    read-mostly sources                    product state
   ┌───────────────────────────────────────────────┐   ┌──────────────────┐
   │ ~/.hermes/cron/jobs.json                      │   │ approvals.json   │
   │ ~/.hermes/logs/{gateway,errors}.log  (tails)  │   │ (~/.hermes/state/│
   │ ~/.hermes/profiles/*/config.yaml (allowlist)  │   │  hermes-android- │
-  │ `hermes` CLI probes (6 safe commands)         │   │  agentic-os/)    │
-  │ LLM-Wiki structural files                     │   └────────┬─────────┘
+  │ `hermes` CLI probes (safe commands)           │   │ history.jsonl    │
+  │ LLM-Wiki structural files                     │   │ apply-log.jsonl  │
+  │ Guarded Apply exact allowlist                 │   └────────┬─────────┘
   │ shutil.disk_usage                             │            │
   └───────────────┬───────────────────────────────┘            │
                   ▼                                             │
    cron.py  profiles.py  wiki.py ── parsers, tolerant, pure     │
                   │                                             │
                   ▼                                             ▼
-             collect.py ──────────── redact.py ──────── approvals.py
+             collect.py ──────────── redact.py ──────── approvals.py / apply.py
                   │        (every string, on ingest)     (counts+preview
                   ▼                                       join inventory)
              models.Inventory  (normalized, already redacted)
@@ -35,9 +36,11 @@ One pipeline, three renderings, one side-file:
 
 `collect.py` is the only module that touches the outside world: it runs the six allowlisted `hermes` probes through one guarded `run_safe_command` (missing binary, timeout, and nonzero exit all degrade to inventory warnings), tails logs with a block-seek reader so file size is irrelevant, and derives health checks, risks, and next actions from the assembled facts. Its output — `models.Inventory` — is the single contract every renderer consumes; renderers never re-read the system.
 
-`approvals.py` owns the one writable file. Writes are atomic (`tempfile` + `os.replace`) because a phone process can die at any moment. Its API has no execution path — there is no function that could run a `suggested_command`, so "the product never executes approvals" is a structural property, not a policy.
+`approvals.py` owns the proposal queue. Writes are atomic (`tempfile` + `os.replace`) because a phone process can die at any moment. Its API has no execution path: adding/showing/marking/script-generation never runs a `suggested_command`.
 
-`cli.py` is thin dispatch: parse args, call collect or the queue, hand the result to a renderer, choose an exit code.
+`apply.py` is the only execution gate. Guarded Apply v0.1 is deliberately narrow: approved status, fresh timestamp, low/medium risk, rollback metadata, exact command allowlist, `shell=False`, dry-run by default, and an append-only hash-chained `apply-log.jsonl`. Refusals are logged too.
+
+`cli.py` is thin dispatch: parse args, call collect/the queue/the guarded apply gate, hand the result to a renderer, choose an exit code.
 
 ## Key decisions
 

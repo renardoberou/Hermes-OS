@@ -111,6 +111,48 @@ class TestApprovals(unittest.TestCase):
         leftovers = [p for p in self.path.parent.iterdir() if p.name.startswith(".approvals-")]
         self.assertEqual(leftovers, [])
 
+    def test_get_and_render_detail(self):
+        item = self.queue.add(
+            title="Refresh dashboard mirror",
+            kind="dashboard-refresh",
+            detail="Render dashboard and copy it to shared storage.",
+            risk_level="low",
+            suggested_command="hermes-os render-html",
+            rollback="remove the generated mirror file",
+        )
+        found = self.queue.get(item.id)
+        self.assertEqual(found.title, "Refresh dashboard mirror")
+        detail = self.queue.render_detail(item.id)
+        self.assertIn(item.id, detail)
+        self.assertIn("Refresh dashboard mirror", detail)
+        self.assertIn("Suggested command", detail)
+        self.assertIn("Rollback", detail)
+        with self.assertRaises(KeyError):
+            self.queue.get("apv-missing")
+
+    def test_write_script_creates_manual_one_shot_without_executing(self):
+        item = self.queue.add(
+            title="Refresh dashboard mirror",
+            kind="dashboard-refresh",
+            detail="Render dashboard and copy it to shared storage.",
+            risk_level="low",
+            suggested_command="hermes-os render-html",
+            rollback="remove the generated mirror file",
+        )
+        out = self.queue.write_script(item.id, Path(self._tmp.name) / "dist" / "actions")
+        self.assertTrue(out.exists())
+        self.assertTrue(out.name.startswith(item.id))
+        text = out.read_text(encoding="utf-8")
+        self.assertIn("ACTION SCRIPT", text)
+        self.assertIn("hermes-os render-html", text)
+        self.assertIn("manual execution only", text.lower())
+        self.assertFalse(contains_secret(text), text)
+
+    def test_write_script_requires_suggested_command(self):
+        item = self.queue.add(title="No command", kind="note")
+        with self.assertRaises(ValueError):
+            self.queue.write_script(item.id, Path(self._tmp.name) / "dist" / "actions")
+
 
 if __name__ == "__main__":
     unittest.main()

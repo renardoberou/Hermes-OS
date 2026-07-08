@@ -10,12 +10,14 @@ Exactly one: the operator. This shapes everything — no auth, no multi-tenancy,
 
 ## Product
 
-A local CLI, `hermes-os`, with three renderings of one read-only inventory, plus one writable-but-inert artifact:
+A local CLI, `hermes-os`, with three renderings of one read-mostly inventory, plus observe/propose artifacts and a deliberately narrow guarded-apply gate:
 
 1. **`status`** — the terminal answer to "is it alive": health checks, risk list, next actions.
 2. **`digest`** — the same inventory compressed into a Telegram-friendly Markdown message opening with `Aye, Captain — Hermes Android Agentic OS status`.
-3. **`render-html`** — a static, phone-first dashboard (`dist/index.html`) with ten sections: Now, Health, Cron jobs, Profiles, Approvals, LLM-Wiki, Skills/Automations, Projects, Risks, Next actions.
-4. **`approvals`** — a local queue file recording proposed changes (title, kind, detail, risk level, status, optional suggested command and rollback). The product records and displays; it never executes.
+3. **`render-html`** — a static, phone-first dashboard (`dist/index.html`) with sections for Now, Daybook, Kanban/live agents, Health, Cron jobs, Profiles, Approvals, Action Center, LLM-Wiki, Skills/Automations, Projects, Risks, and Next actions.
+4. **`approvals`** — a local queue file recording proposed changes (title, kind, detail, risk level, status, optional suggested command and rollback). The product records, displays, and can write a manual script. In the Android shell, dashboard chips copy/open Termux commands for manual execution only.
+5. **`history` / `trend`** — compact local JSONL audit snapshots and terminal trend summaries.
+6. **`apply`** — Guarded Apply v0.1: dry-run by default; `--execute` requires approved status, non-stale timestamp, low/medium risk, rollback metadata, exact allowlist match, and writes a hash-chained local action log.
 
 Supporting commands: `collect --json` (the raw normalized inventory, for piping into other lanes) and `doctor` (environment self-check that reports rather than crashes).
 
@@ -25,7 +27,7 @@ Supporting commands: `collect --json` (the raw normalized inventory, for piping 
 
 ## Hard constraints
 
-Android/Termux runtime; Python stdlib + POSIX shell + static HTML only; no paid services; no laptop-only workflows; no Docker/systemd/desktop-browser assumptions. No credential is ever read, printed, or requested — `.env` files, token files, and session transcripts are out of bounds by construction, and everything that *is* read passes a tested redaction layer. Live Hermes cron/profiles/memory/gateway state is never modified, and no second Telegram gateway is ever started: there is one gateway owner, and this product is not it.
+Android/Termux runtime; Python stdlib + POSIX shell + static HTML only; no paid services; no laptop-only workflows; no Docker/systemd/desktop-browser assumptions. No credential is ever read, printed, or requested — `.env` files, token files, and session transcripts are out of bounds by construction, and everything that *is* read passes a tested redaction layer. Live Hermes profiles/memory/gateway state is never modified, and no second Telegram gateway is ever started: there is one gateway owner, and this product is not it. Writes are limited to Hermes-OS state/output files plus the narrow Guarded Apply v0.1 allowlist.
 
 ## Success criteria (v0 acceptance)
 
@@ -33,4 +35,4 @@ The repo is self-contained; `hermes-os` works via wrapper or `python -m hermes_o
 
 ## Non-goals for v0
 
-No writing to Hermes state, no cron editing, no gateway management, no Telegram sending (the digest is composed for Telegram; delivery rides existing lanes), no background daemon, no historical database of inventories, no remote access. Several of these are deliberate v0.1/v1 candidates — see `ROADMAP.md` — and all of them stay behind the approval-first policy when they arrive.
+No arbitrary writing to Hermes state, no broad cron editing, no gateway management, no Telegram sending (the digest is composed for Telegram; delivery rides existing lanes), no background daemon, no remote access, and no arbitrary apply. Future write paths stay behind the approval-first and allowlist policy.

@@ -1,12 +1,12 @@
 # Hermes-OS
 
-A phone-first, **read-only control plane** for a Hermes Agent installation on Android/Termux. One command gives you a concise status; one gives you a Telegram-ready digest; one writes a static mobile dashboard. A local approval queue records proposed changes without ever executing them.
+A phone-first, **observe/propose control plane** for a Hermes Agent installation on Android/Termux. One command gives you a concise status; one gives you a Telegram-ready digest; one writes a static mobile dashboard. A local approval queue records proposed changes, can emit manual action scripts, keeps an audit trail, and supports Guarded Apply v0.1 for a tiny allowlisted command set.
 
 This is not a generic agent wrapper. It is built around one specific operating system: Hermes profiles, the cron scheduler, the single-owner Telegram gateway, and the LLM-Wiki vault at `/storage/emulated/0/Documents/LLM-Wiki`.
 
 ## What it will and won't do
 
-It reads. It renders. It records. It never mutates Hermes cron jobs, profiles, memory, or gateway state; never starts a second gateway; never executes an approval item; and never prints credentials — everything ingested passes through a redaction layer that is itself under test.
+It reads. It renders. It records. It writes only its own state (`approvals.json`, `history.jsonl`, `apply-log.jsonl`, generated dashboard/action-script files). Guarded Apply v0.1 may execute only approved, fresh, low/medium-risk commands from a narrow allowlist (`hermes-os status`, `trend`, `history append`, `render-html`); it never starts a second gateway, never edits profiles/memory/credentials, and never runs arbitrary shell. Everything ingested passes through a redaction layer that is itself under test.
 
 ## Requirements
 
@@ -44,11 +44,16 @@ hermes-os render-html     # writes dist/index.html (static, no JS, no CDN)
 hermes-os approvals list  # pending items in the local approval queue
 hermes-os approvals add --title "..." --kind "..." --detail "..." \
                          [--risk low|medium|high] [--command "..."] [--rollback "..."]
+hermes-os approvals show <id>      # full proposal detail, command, rollback, policy
+hermes-os approvals script <id>    # writes dist/actions/<id>-*.sh for manual execution
 hermes-os approvals set <id> <pending|approved|rejected|done>   # record-keeping only
+hermes-os history append  # append one compact JSONL audit snapshot
+hermes-os trend           # summarize audit snapshots
+hermes-os apply <id>      # Guarded Apply v0.1 dry-run; add --execute to run allowlisted actions
 hermes-os doctor          # self-checks; missing paths are warnings, not crashes
 ```
 
-`approvals set` updates a status field in the product's own JSON file. Nothing anywhere in this product runs a `suggested_command` — execution stays a deliberate human act in your terminal.
+`approvals show`, `approvals script`, and `approvals set` update or render only the product's own files. `apply <id>` is dry-run by default. `apply <id> --execute` is guarded by status, age, risk, rollback metadata, and an exact command allowlist, then records a hash-chained action log. Arbitrary shell and high-risk approvals are refused.
 
 ## Daily use
 
@@ -56,7 +61,9 @@ Morning: `hermes-os digest` and paste (or pipe via your existing Hermes Telegram
 
 When you're deciding whether to change something: `hermes-os approvals add --title "Enable EIR draft cron" --kind cron-change --risk low --command "hermes cron enable job-eir-draft" --rollback "hermes cron disable job-eir-draft"`. The queue is your buffer between "I noticed" and "I acted" — review it with `approvals list`, mark items `approved` when you've decided, `done` after you've executed them yourself.
 
-For a fuller view: `hermes-os render-html`, then `termux-open dist/index.html`. The dashboard is a single static file styled for a phone screen — including **Now**, **Daybook**, health, cron, approvals, wiki queue, risks, and **Next actions** — so it also survives being copied anywhere (Downloads, the wiki's `_meta`, a browser bookmark).
+For a fuller view: `hermes-os render-html`, then `termux-open dist/index.html`. The dashboard is a single static file styled for a phone screen — including **Now**, **Daybook**, **Kanban / live agents**, health, cron, approvals, **Action Center**, wiki queue, risks, and **Next actions** — so it also survives being copied anywhere (Downloads, the wiki's `_meta`, a browser bookmark).
+
+Action Center v0.2 adds the safe proposal layer: `approvals show <id>`, `approvals script <id>`, `history append`, and `trend`. Guarded Apply v0.1 adds `apply <id>` as a dry-run-first execution gate for a tiny local allowlist. In the Android shell, dashboard chips such as **Status**, **Trend**, **Refresh dashboard**, and approved-item **Dry run** are tappable: they copy/open Termux, and `--execute` remains explicit.
 
 ## Configuration
 
@@ -90,7 +97,7 @@ Fixtures live in `tests/fixtures/` (regenerate with `python tests/fixtures/_gene
 ## Layout
 
 ```
-hermes_os/        the package (config, collect, redact, renderers, approvals, cli)
+hermes_os/        the package (config, collect, kanban, history, apply, redact, renderers, approvals, cli)
 scripts/          hermes-os wrapper + install/uninstall for Termux
 templates/        dashboard.html and digest.md frames ({{TOKEN}} substitution)
 tests/            unittest suite + fixtures (sample jobs, profiles, wiki, logs)

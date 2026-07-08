@@ -15,9 +15,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tempfile
 import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -51,6 +52,15 @@ def _now_iso() -> str:
 
 def _new_id() -> str:
     return "apv-" + uuid.uuid4().hex[:8]
+
+
+def _slug(text: str) -> str:
+    cleaned = re.sub(r"[^a-zA-Z0-9._-]+", "-", text.strip()).strip("-._")
+    return (cleaned or "approval")[:80]
+
+
+def _shell_comment(text: str) -> str:
+    return "\n".join("# " + line for line in str(text).splitlines())
 
 
 class ApprovalQueue:
@@ -146,6 +156,43 @@ class ApprovalQueue:
             items = [a for a in items if a.status == status]
         return sorted(items, key=lambda a: a.created_at)
 
+    def get(self, item_id: str) -> Approval:
+        for item in self.load():
+            if item.id == item_id:
+                return item
+        raise KeyError(f"no approval with id {item_id!r}")
+
+    def render_detail(self, item_id: str) -> str:
+        """Return a human-readable detail page for one approval item."""
+        item = self.get(item_id)
+        lines = [
+            f"Approval {item.id}",
+            "=" * (len(item.id) + 9),
+            f"Title: {item.title}",
+            f"Kind: {item.kind}",
+            f"Risk: {item.risk_level}",
+            f"Status: {item.status}",
+            f"Created: {item.created_at or '—'}",
+        ]
+        if item.updated_at:
+            lines.append(f"Updated: {item.updated_at}")
+        if item.detail:
+            lines.extend(["", "Detail", "------", item.detail])
+        if item.suggested_command:
+            lines.extend(["", "Suggested command", "-----------------", item.suggested_command])
+        else:
+            lines.extend(["", "Suggested command", "-----------------", "(none recorded)"])
+        if item.rollback:
+            lines.extend(["", "Rollback", "--------", item.rollback])
+        lines.extend([
+            "",
+            "Execution policy",
+            "----------------",
+            "This approval record is not executed by listing, showing, or changing status.",
+            "Use `hermes-os approvals script ID` to write a manual one-shot script.",
+        ])
+        return redact_text("\n".join(lines)) + "\n"
+
     def set_status(self, item_id: str, status: str) -> Approval:
         """Record-keeping only: mark an item approved/rejected/done.
 
@@ -161,6 +208,54 @@ class ApprovalQueue:
                 self._save(items)
                 return item
         raise KeyError(f"no approval with id {item_id!r}")
+
+    def write_script(self, item_id: str, out_dir: Path) -> Path:
+        """Write a manual one-shot script for an approval's suggested command.
+
+        The method writes a file only; it never executes the command. Scripts are
+        intentionally verbose so their provenance and rollback note travel with
+        the file if copied to Android shared storage.
+        """
+        item = self.get(item_id)
+        if not item.suggested_command.strip():
+            raise ValueError(f"approval {item.id} has no suggested_command")
+        out_dir = Path(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / f"{item.id}-{_slug(item.kind or item.title)}.sh"
+        body = "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                "",
+                "# HERMES-OS ACTION SCRIPT — manual execution only.",
+                "# Generated from a local approval record. Hermes-OS did not run it.",
+                f"# Approval: {item.id}",
+                f"# Title: {item.title}",
+                f"# Kind: {item.kind}",
+                f"# Risk: {item.risk_level}",
+                f"# Status at generation: {item.status}",
+                f"# Created: {item.created_at or '—'}",
+                "#",
+                "# Detail:",
+                _shell_comment(item.detail or "(none)"),
+                "#",
+                "# Rollback:",
+                _shell_comment(item.rollback or "(none recorded)"),
+                "",
+                "printf '%s\\n' 'Hermes-OS manual action script'",
+                f"printf '%s\\n' 'approval={item.id} risk={item.risk_level}'",
+                "printf '%s\\n' 'review the command below before continuing'",
+                "",
+                item.suggested_command,
+                "",
+            ]
+        )
+        path.write_text(redact_text(body), encoding="utf-8")
+        try:
+            path.chmod(0o700)
+        except OSError:
+            pass
+        return path
 
     def counts(self) -> dict:
         items = self.load()

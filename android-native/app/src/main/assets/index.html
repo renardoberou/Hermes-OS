@@ -1,22 +1,176 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Hermes-OS</title>
-  <style>
-    body{margin:0;background:#120d08;color:#ead9bd;font:15px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:24px}
-    main{max-width:680px;margin:auto;border:1px solid #5d4027;border-radius:18px;padding:22px;background:#1c1510}
-    h1{margin-top:0;color:#f4b86a;font-size:24px}
-    code{background:#261b13;padding:2px 5px;border-radius:5px}
-    .muted{color:#b79d77}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="60">
+<title>Hermes // Android Agentic OS</title>
+<style>
+:root{
+  --ink:#120d08;        /* warm black */
+  --panel:#1c1510;      /* card */
+  --line:#3a2a1a;       /* copper rule */
+  --text:#e9dcc3;       /* bone */
+  --dim:#9a8768;        /* faded brass */
+  --amber:#ffb454;      /* phosphor amber (signature) */
+  --ok:#8fd68f;
+  --warn:#ffb454;
+  --risk:#ff6b57;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--ink);color:var(--text);
+  font-family:ui-monospace,"Cascadia Mono","JetBrains Mono","Fira Code",Menlo,Consolas,monospace;
+  font-size:14px;line-height:1.55;
+  padding-bottom:48px;
+}
+.wrap{max-width:720px;margin:0 auto;padding:0 14px}
+header{
+  position:sticky;top:0;z-index:5;
+  background:linear-gradient(180deg,rgba(18,13,8,.97) 75%,rgba(18,13,8,.85));
+  border-bottom:1px solid var(--line);
+  padding:14px 0 10px;
+  backdrop-filter:blur(2px);
+}
+header .wrap{display:flex;flex-direction:column;gap:8px}
+.masthead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+h1{
+  font-size:15px;letter-spacing:.14em;font-weight:700;color:var(--amber);
+  text-transform:uppercase;white-space:nowrap;
+}
+h1 span{color:var(--dim);font-weight:400}
+.stamp{color:var(--dim);font-size:11.5px}
+.lamps{display:flex;gap:14px;flex-wrap:wrap}
+.lamp{display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+.lamp i{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--dim)}
+.lamp.ok i{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+.lamp.warn i{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+.lamp.risk i{background:var(--risk);box-shadow:0 0 7px var(--risk)}
+@media (prefers-reduced-motion: no-preference){
+  .lamp.risk i{animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.45}}
+}
+main{padding-top:16px}
+section{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:8px;
+  margin:0 0 14px;
+  padding:12px 14px 13px;
+}
+section h2{
+  font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--amber);margin-bottom:9px;
+  padding-bottom:7px;border-bottom:1px solid var(--line);
+}
+.subhead{
+  font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);
+  margin:10px 0 3px;
+}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:3px 0;border-bottom:1px dotted rgba(154,135,104,.18)}
+.kv:last-child{border-bottom:0}
+.kv .k{color:var(--dim);flex:0 0 auto}
+.kv .v{text-align:right;word-break:break-word}
+ul{list-style:none}
+li{padding:5px 0;border-bottom:1px dotted rgba(154,135,104,.18);word-break:break-word}
+li:last-child{border-bottom:0}
+.row-title{color:var(--text)}
+.row-sub{color:var(--dim);font-size:12px;display:block;margin-top:1px}
+.tap-actions{display:flex;flex-wrap:wrap;gap:8px;margin:9px 0 6px}
+.tap{
+  display:inline-block;min-height:38px;padding:8px 11px;border:1px solid var(--line);
+  border-radius:999px;background:rgba(255,180,84,.08);color:var(--amber);
+  text-decoration:none;font-size:12px;line-height:20px;
+}
+.tap:active{background:rgba(255,180,84,.22);transform:translateY(1px)}
+.tap.dim{color:var(--dim);background:transparent}
+.pill{
+  display:inline-block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  border:1px solid;border-radius:999px;padding:0 7px;margin-left:6px;vertical-align:1px;
+}
+.pill.ok{color:var(--ok);border-color:var(--ok)}
+.pill.warn{color:var(--warn);border-color:var(--warn)}
+.pill.risk{color:var(--risk);border-color:var(--risk)}
+.pill.unknown,.pill.dim{color:var(--dim);border-color:var(--dim)}
+.empty{color:var(--dim);font-style:italic}
+.bar{height:5px;background:rgba(154,135,104,.2);border-radius:3px;overflow:hidden;margin-top:4px}
+.bar b{display:block;height:100%;background:var(--amber)}
+.bar.hot b{background:var(--risk)}
+footer{color:var(--dim);font-size:11px;text-align:center;margin-top:22px}
+footer .rule{color:var(--line)}
+a{color:var(--amber)}
+</style>
 </head>
 <body>
-  <main>
-    <h1>Hermes-OS</h1>
-    <p>Bundled placeholder dashboard for the Android shell.</p>
-    <p class="muted">Use the app's <strong>Live</strong> button after generating the local mirror with <code>hermes-os render-html</code>.</p>
-  </main>
+<header>
+  <div class="wrap">
+    <div class="masthead">
+      <h1>Hermes <span>//</span> Android Agentic OS</h1>
+      <div class="stamp">2026-07-07T22:16:39-03:00</div>
+    </div>
+    <div class="lamps"><span class="lamp ok"><i></i>gateway</span><span class="lamp ok"><i></i>cron</span><span class="lamp ok"><i></i>risks</span></div>
+  </div>
+</header>
+<main class="wrap">
+<section>
+<h2>1 · Now</h2>
+<div class="kv"><span class="k">generated</span><span class="v">2026-07-07T22:16:39-03:00</span></div><div class="kv"><span class="k">active profile</span><span class="v">unknown</span></div><div class="kv"><span class="k">gateway</span><span class="v">running<span class="pill ok">ok</span></span></div><div class="kv"><span class="k">hermes</span><span class="v">Hermes Agent v0.18.0 (2026.7.1)
+Project: /data/data/com.termux/files/home/.hermes/hermes-agent
+Python: 3.13.13
+OpenAI SDK: 2.24.0</span></div><div class="kv"><span class="k">host</span><span class="v">Termux · Python 3.13.13</span></div>
+</section>
+<section>
+<h2>2 · Daybook</h2>
+<div class="kv"><span class="k">date</span><span class="v">2026-07-07</span></div><div class="kv"><span class="k">completed today</span><span class="v">7 item(s) · 7 cron lane(s) ran</span></div><div class="kv"><span class="k">requires action</span><span class="v">4 item(s)</span></div><h3 class="subhead">Done today</h3><ul><li><span class="row-title">Daily LLM-Wiki whole-vault research — 2026-07-07</span><span class="pill ok">ok</span><span class="row-sub">ok at 11:05 · 2026-07-07_11-05-01.md · cron:64a1894ffd3e</span></li><li><span class="row-title">Hermes cron/gateway health watchdog</span><span class="pill ok">ok</span><span class="row-sub">ok at 22:15 · 2026-07-07_22-15-04.md · cron:3c10c653f88e</span></li><li><span class="row-title">Hermes memory distillation loop</span><span class="pill ok">ok</span><span class="row-sub">ok at 20:12 · 2026-07-07_20-12-33.md · cron:a1af956ae87c</span></li><li><span class="row-title">Daily Hermes self-improvement loop via selfimprove profile</span><span class="pill ok">ok</span><span class="row-sub">ok at 20:16 · 2026-07-07_20-16-56.md · cron:465df6e2d357</span></li><li><span class="row-title">Hermes Android Agentic OS dashboard refresh</span><span class="pill ok">ok</span><span class="row-sub">ok at 22:15 · 2026-07-07_22-15-54.md · cron:5d9c14eb0038</span></li><li><span class="row-title">Hermes Android Agentic OS LLM-Wiki graph refresh</span><span class="pill ok">ok</span><span class="row-sub">ok at 21:56 · 2026-07-07_21-56-48.md · cron:dab6b9b12b23</span></li><li><span class="row-title">Aye, Captain — Hermes Posture Lab swarm run complete.</span><span class="pill ok">ok</span><span class="row-sub">ok at 20:37 · 2026-07-07_20-37-57.md · cron:bee852ab5dca</span></li></ul><h3 class="subhead">Needs Bernado / approval</h3><ul><li><span class="row-title">Deep-pass P27</span><span class="pill warn">deep-pass</span><span class="row-sub">acquire/preserve PDF/text for 2606.31273v1, then update the scientific-discovery comparison with a “claim calibration / evidence license” dimension. · cron:64a1894ffd3e</span></li><li><span class="row-title">Keep 1</span><span class="pill warn">wiki-ingest approval</span><span class="row-sub">2607.02507v1, latent objective emergence in multi-agent debates; good next inbox candidate for agent-evaluation/social-pressure discriminators. · cron:64a1894ffd3e</span></li><li><span class="row-title">Keep 2</span><span class="pill warn">wiki-ingest approval</span><span class="row-sub">2607.04293v1, CausalGame; good next source for extending the scientific-discovery benchmark comparison with causal-thinking and hidden-confounder dimensions. · cron:64a1894ffd3e</span></li><li><span class="row-title">P27</span><span class="pill warn">deep-pass backlog</span><span class="row-sub">arXiv:2606.31273v1 — The Calibration Turn in AI-Assisted Research: A Conceptual and Methodological Framework for Evidence-Licensed Claims — KEEP from private Apify actor approval digest. · queries/queue-keep.md</span></li></ul>
+</section>
+<section>
+<h2>3 · Kanban / live agents</h2>
+<div class="kv"><span class="k">current board</span><span class="v">zephyr-synth</span></div><div class="kv"><span class="k">open tasks</span><span class="v">0</span></div><div class="kv"><span class="k">running / blocked</span><span class="v">0 / 0</span></div><div class="kv"><span class="k">live agents</span><span class="v">2</span></div><h3 class="subhead">Live agents</h3><ul><li><span class="row-title">Telegram gateway / scheduler</span><span class="pill ok">ok</span><span class="row-sub">gateway · profile default · pid 24953</span></li><li><span class="row-title">Hermes local web backend</span><span class="pill ok">ok</span><span class="row-sub">local-web · profile default · pid 24961</span></li></ul><h3 class="subhead">Boards</h3><ul><li><span class="row-title">Default</span><span class="pill dim">dim</span><span class="row-sub">default · open 0 · run 0 · ready 0 · blocked 0 · done 0</span></li><li><span class="row-title">Zephyr Synth</span><span class="pill ok">ok</span><span class="row-sub">zephyr-synth · open 0 · run 0 · ready 0 · blocked 0 · done 0</span></li></ul><h3 class="subhead">Running / blocked tasks</h3><p class="empty">no running or blocked Kanban tasks</p>
+</section>
+<section>
+<h2>4 · Health</h2>
+<ul><li><span class="row-title">gateway</span><span class="pill ok">ok</span><span class="row-sub">gateway reports running</span></li><li><span class="row-title">cron-scheduler</span><span class="pill ok">ok</span><span class="row-sub">cron scheduler running</span></li><li><span class="row-title">cron-jobs</span><span class="pill ok">ok</span><span class="row-sub">no failing jobs</span></li><li><span class="row-title">wiki-heartbeat</span><span class="pill ok">ok</span><span class="row-sub">heartbeat 0.31h old</span></li><li><span class="row-title">disk:home (/data/data/com.termux/files/home/.hermes)</span><span class="pill ok">ok</span><span class="row-sub">73% used</span></li><li><span class="row-title">disk:wiki-storage (/storage/emulated/0/Documents/LLM-Wiki)</span><span class="pill ok">ok</span><span class="row-sub">73% used</span></li><li><span class="row-title">gateway-ownership</span><span class="pill ok">ok</span><span class="row-sub">no duplicate-owner signals in log tail</span></li></ul><div class="kv"><span class="k">home (/data/data/com.termux/files/home/.hermes)</span><span class="v">73% of 222.6 GB</span></div><div class="bar"><b style="width:73%"></b></div><div class="kv"><span class="k">wiki-storage (/storage/emulated/0/Documents/LLM-Wiki)</span><span class="v">73% of 222.6 GB</span></div><div class="bar"><b style="width:73%"></b></div>
+</section>
+<section>
+<h2>5 · Cron jobs</h2>
+<div class="kv"><span class="k">scheduler</span><span class="v">running<span class="pill ok">ok</span></span></div><div class="kv"><span class="k">jobs</span><span class="v">10 enabled / 10 total, 0 failing</span></div><ul><li><span class="row-title">Daily LLM-Wiki whole-vault research + web scout</span><span class="pill ok">ok</span><span class="row-sub">sched cron · next 2026-07-08T11:00:00-03:00 · last 2026-07-07T11:05:03.460494-03:00</span></li><li><span class="row-title">Weekly LLM-Wiki placement audit</span><span class="pill ok">ok</span><span class="row-sub">sched cron · next 2026-07-12T10:45:00-03:00 · last 2026-07-05T10:45:57.654325-03:00</span></li><li><span class="row-title">Hermes cron/gateway health watchdog</span><span class="pill ok">ok</span><span class="row-sub">sched cron · next 2026-07-07T22:17:00-03:00 · last 2026-07-07T22:15:04.819300-03:00</span></li><li><span class="row-title">Thot A+ LLM-Wiki structural steward</span><span class="pill ok">ok</span><span class="row-sub">sched cron · next 2026-07-07T23:30:00-03:00 · last 2026-07-06T23:32:21.655555-03:00</span></li><li><span class="row-title">Hermes memory distillation loop</span><span class="pill ok">ok</span><span class="row-sub">sched cron · next 2026-07-08T00:12:00-03:00 · last 2026-07-07T20:12:33.683676-03:00</span></li><li><span class="row-title">Research Source Private Actor Approval Digest</span><span class="pill ok">ok</span><span class="row-sub">sched cron · next 2026-07-13T10:00:00-03:00 · last 2026-07-06T10:16:08.587320-03:00</span></li><li><span class="row-title">Daily Hermes self-improvement loop via selfimprove profile</span><span class="pill ok">ok</span><span class="row-sub">sched cron · next 2026-07-08T20:15:00-03:00 · last 2026-07-07T20:16:57.603694-03:00</span></li><li><span class="row-title">Hermes Android Agentic OS dashboard refresh</span><span class="pill ok">ok</span><span class="row-sub">sched interval · next 2026-07-07T22:20:54.410530-03:00 · last 2026-07-07T22:15:54.410530-03:00</span></li><li><span class="row-title">Hermes Android Agentic OS LLM-Wiki graph refresh</span><span class="pill ok">ok</span><span class="row-sub">sched interval · next 2026-07-07T22:26:48.211652-03:00 · last 2026-07-07T21:56:48.211652-03:00</span></li><li><span class="row-title">Hermes Posture Lab autonomous swarm controller</span><span class="pill ok">ok</span><span class="row-sub">sched cron · next 2026-07-08T20:35:00-03:00 · last 2026-07-07T20:37:58.745779-03:00</span></li></ul>
+</section>
+<section>
+<h2>6 · Profiles</h2>
+<ul><li><span class="row-title">Profile</span><span class="row-sub"></span></li><li><span class="row-title">bighart</span><span class="row-sub"></span></li><li><span class="row-title">camera-lens</span><span class="row-sub"></span></li><li><span class="row-title">client-template</span><span class="row-sub"></span></li><li><span class="row-title">fable-review</span><span class="row-sub"></span></li><li><span class="row-title">fable-soul</span><span class="row-sub"></span></li><li><span class="row-title">ops</span><span class="row-sub"></span></li><li><span class="row-title">perdurabo</span><span class="row-sub"></span></li><li><span class="row-title">resonant-systems</span><span class="row-sub"></span></li><li><span class="row-title">selfimprove</span><span class="row-sub"></span></li><li><span class="row-title">wiki</span><span class="row-sub"></span></li></ul>
+</section>
+<section>
+<h2>7 · Approvals</h2>
+<div class="kv"><span class="k">pending</span><span class="v">0</span></div><div class="kv"><span class="k">approved / done</span><span class="v">0 / 0</span></div><div class="tap-actions" aria-label="tap actions"><a class="tap" href="hermesos://termux?cmd=hermes-os%20status">Open status</a><a class="tap" href="hermesos://copy?text=hermes-os%20approvals%20add%20--title%20%22...%22%20--kind%20%22...%22%20--detail%20%22...%22%20--risk%20low">Copy add approval</a></div><p class="empty">queue is empty</p>
+</section>
+<section>
+<h2>8 · Action Center</h2>
+<div class="kv"><span class="k">audit samples</span><span class="v">2</span></div><div class="kv"><span class="k">latest cron failing</span><span class="v">0</span></div><div class="kv"><span class="k">latest approvals pending</span><span class="v">0</span></div><div class="kv"><span class="k">latest active agents</span><span class="v">2</span></div><div class="kv"><span class="k">guarded apply</span><span class="v">available<span class="pill ok">ok</span></span></div><ul><li><div class="tap-actions" aria-label="tap actions"><a class="tap" href="hermesos://termux?cmd=hermes-os%20status">Status</a><a class="tap" href="hermesos://termux?cmd=hermes-os%20trend">Trend</a><a class="tap" href="hermesos://termux?cmd=hermes-os%20render-html">Refresh dashboard</a><a class="tap" href="hermesos://copy?text=/storage/emulated/0/Documents/HermesOS/index.html">Copy mirror path</a></div><span class="row-title">Action scripts</span><span class="row-sub">/data/data/com.termux/files/home/hermes-android-agentic-os/dist/actions</span></li><li><span class="row-title">Audit trail</span><span class="row-sub">/data/data/com.termux/files/home/.hermes/state/hermes-android-agentic-os/history.jsonl</span></li><li><span class="row-title">Apply log</span><span class="row-sub">/data/data/com.termux/files/home/.hermes/state/hermes-android-agentic-os/apply-log.jsonl</span></li><li><span class="row-title">Approval detail</span><span class="row-sub">tap approval Show button, or run: hermes-os approvals show &lt;id&gt;</span></li><li><span class="row-title">Manual script handoff</span><span class="row-sub">tap Copy script cmd, or run: hermes-os approvals script &lt;id&gt;</span></li><li><span class="row-title">Guarded Apply v0.1</span><span class="row-sub">dry-run: hermes-os apply &lt;id&gt; · execute: hermes-os apply &lt;id&gt; --execute</span></li><li><span class="row-title">Allowlist</span><span class="row-sub">hermes-os status · hermes-os trend · hermes-os history append · hermes-os render-html</span></li><li><span class="row-title">Guard policy</span><span class="row-sub">Guarded Apply v0.1 is dry-run by default, executes only approved non-stale low/medium-risk allowlisted commands with rollback metadata, and records a hash-chained local action log.</span></li></ul>
+</section>
+<section>
+<h2>9 · LLM-Wiki</h2>
+<div class="kv"><span class="k">notes</span><span class="v">1381</span></div><div class="kv"><span class="k">queue</span><span class="v">29 open / 29 total</span></div><div class="kv"><span class="k">heartbeat</span><span class="v">0.31h ago<span class="pill ok">ok</span></span></div><ul><li><span class="row-sub">- Report: `_meta/audits/2026-07-05-karpathy-a-plus-stewardship.md`</span></li><li><span class="row-sub">- Ran `scripts/wiki_lint.py --fix`; regenerated index-full, refreshed graph settings, applied safe link/orphan hygiene, and wrote lint report.</span></li><li><span class="row-sub">- Report: `queries/wiki-lint-report-2026-07-06.md`</span></li><li><span class="row-sub">- Ran `scripts/wiki_a_plus_guardian.py`; result: all ratings A+ without changing deep intellectual content.</span></li><li><span class="row-sub">- Report: `_meta/audits/2026-07-06-karpathy-a-plus-stewardship.md`</span></li></ul>
+</section>
+<section>
+<h2>10 · Skills / Automations</h2>
+<ul><li><span class="row-title">ops</span><span class="row-sub">Hermes cron/gateway health watchdog</span></li><li><span class="row-title">other</span><span class="row-sub">Hermes Android Agentic OS dashboard refresh, Hermes Posture Lab autonomous swarm controller</span></li><li><span class="row-title">research</span><span class="row-sub">Research Source Private Actor Approval Digest</span></li><li><span class="row-title">selfimprove</span><span class="row-sub">Daily Hermes self-improvement loop via selfimprove profile</span></li><li><span class="row-title">wiki</span><span class="row-sub">Daily LLM-Wiki whole-vault research + web scout, Weekly LLM-Wiki placement audit, Thot A+ LLM-Wiki structural steward, Hermes memory distillation loop, Hermes Android Agentic OS LLM-Wiki graph refresh</span></li></ul><div class="kv"><span class="k">tools</span><span class="v">Built-in toolsets (cli):, ✓ enabled  web  🔍 Web Search &amp; Scraping, ✓ enabled  browser  🌐 Browser Automation, ✓ enabled  terminal  💻 Terminal &amp; Processes, ✓ enabled  file  📁 File Operations, ✓ enabled  code_execution  ⚡ Code Execution, ✓ enabled  vision  👁️  Vision / Image Analysis, ✓ enabled  video  🎬 Video Analysis, ✓ enabled  image_gen  🎨 Image Generation, ✓ enabled  video_gen  🎬 Video Generation, ✗ disabled  x_search  🐦 X (Twitter) Search, ✓ enabled  tts  🔊 Text-to-Speech, ✓ enabled  skills  📚 Skills, ✓ enabled  todo  📋 Task Planning, ✓ enabled  memory  💾 Memory, ✓ enabled  context_engine  🧩 Context Engine, ✓ enabled  session_search  🔎 Session Search, ✓ enabled  clarify  ❓ Clarifying Questions, ✓ enabled  delegation  👥 Task Delegation, ✓ enabled  cronjob  ⏰ Cron Jobs</span></div>
+</section>
+<section>
+<h2>11 · Projects</h2>
+<ul><li><span class="row-title">Profile</span><span class="row-sub">profiles: Profile · cron jobs: 0</span></li><li><span class="row-title">bighart</span><span class="row-sub">profiles: bighart · cron jobs: 0</span></li><li><span class="row-title">camera-lens</span><span class="row-sub">profiles: camera-lens · cron jobs: 0</span></li><li><span class="row-title">client</span><span class="row-sub">profiles: client-template · cron jobs: 0</span></li><li><span class="row-title">fable-review</span><span class="row-sub">profiles: fable-review · cron jobs: 0</span></li><li><span class="row-title">fable-soul</span><span class="row-sub">profiles: fable-soul · cron jobs: 0</span></li><li><span class="row-title">ops</span><span class="row-sub">profiles: ops · cron jobs: 1</span></li><li><span class="row-title">perdurabo</span><span class="row-sub">profiles: perdurabo · cron jobs: 0</span></li><li><span class="row-title">research</span><span class="row-sub">profiles: — · cron jobs: 1</span></li><li><span class="row-title">resonant-systems</span><span class="row-sub">profiles: resonant-systems · cron jobs: 0</span></li><li><span class="row-title">selfimprove</span><span class="row-sub">profiles: selfimprove · cron jobs: 1</span></li><li><span class="row-title">wiki</span><span class="row-sub">profiles: wiki · cron jobs: 5</span></li></ul>
+</section>
+<section>
+<h2>12 · Risks</h2>
+<p class="empty">none detected</p>
+</section>
+<section>
+<h2>13 · Next actions</h2>
+<ul><li>Review today&#x27;s 4 action item(s) in the Daybook section.</li><li>deep-pass: Deep-pass P27</li><li>wiki-ingest approval: Keep 1</li><li>wiki-ingest approval: Keep 2</li><li>deep-pass backlog: P27</li><li>Monitor 2 live agent(s) in the Kanban / live agents section.</li></ul>
+</section>
+<footer>observe/propose · tap chips copy/open Termux; no command is auto-run<br>
+<a href="llm-wiki-graph.html">open LLM-Wiki graph view</a><br>
+<span class="rule">─────</span> hermes-os v0.3.0 <span class="rule">─────</span></footer>
+</main>
 </body>
 </html>

@@ -17,15 +17,17 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 SECTION_TITLES = (
     "1 · Now",
     "2 · Daybook",
-    "3 · Health",
-    "4 · Cron jobs",
-    "5 · Profiles",
-    "6 · Approvals",
-    "7 · LLM-Wiki",
-    "8 · Skills / Automations",
-    "9 · Projects",
-    "10 · Risks",
-    "11 · Next actions",
+    "3 · Kanban / live agents",
+    "4 · Health",
+    "5 · Cron jobs",
+    "6 · Profiles",
+    "7 · Approvals",
+    "8 · Action Center",
+    "9 · LLM-Wiki",
+    "10 · Skills / Automations",
+    "11 · Projects",
+    "12 · Risks",
+    "13 · Next actions",
 )
 
 
@@ -73,6 +75,14 @@ class TestDashboard(unittest.TestCase):
         self.assertIn("cron/gateway watchdog", self.html)
         self.assertIn("LLM-Wiki research steward", self.html)
         self.assertIn("5 open / 7 total", self.html)
+        self.assertIn("Live agents", self.html)
+        self.assertIn("Boards", self.html)
+        self.assertIn("Action scripts", self.html)
+        self.assertIn("tap chips copy/open Termux", self.html)
+        self.assertIn("hermesos://termux", self.html)
+        self.assertIn("hermesos://copy", self.html)
+        self.assertIn("Guarded Apply v0.1", self.html)
+        self.assertIn("hermes-os apply &lt;id&gt;", self.html)
 
     def test_no_secrets(self):
         self.assertFalse(contains_secret(self.html), self.html[:600])

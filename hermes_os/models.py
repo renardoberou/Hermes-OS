@@ -90,6 +90,8 @@ class Inventory:
     logs: dict = field(default_factory=dict)        # gateway_tail, errors_tail
     wiki: Optional[WikiStatus] = None
     today: dict = field(default_factory=dict)       # daybook: done + user-action queue
+    kanban: dict = field(default_factory=dict)      # boards, task counts, active workers
+    action_center: dict = field(default_factory=dict) # approvals, scripts, audit trend
     disks: list = field(default_factory=list)       # [DiskUsage]
     approvals: dict = field(default_factory=dict)   # counts + pending preview
     skills: dict = field(default_factory=dict)      # lanes, promotion candidates
@@ -127,6 +129,8 @@ class Inventory:
             "logs": self.logs,
             "wiki": self.wiki,
             "today": self.today,
+            "kanban": self.kanban,
+            "action_center": self.action_center,
             "disks": self.disks,
             "approvals": self.approvals,
             "skills": self.skills,

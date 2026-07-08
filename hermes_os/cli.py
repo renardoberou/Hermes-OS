@@ -9,6 +9,7 @@
                             [--risk low|medium|high]
                             [--command "..."] [--rollback "..."]
     hermes-os approvals set ID STATUS
+    hermes-os apply ID [--execute]
     hermes-os doctor
     hermes-os version
 
@@ -25,9 +26,11 @@ import sys
 from pathlib import Path
 
 from . import PRODUCT_NAME, __version__
+from .apply import DEFAULT_MAX_APPROVAL_AGE_HOURS, GuardedApply
 from .approvals import VALID_RISK, VALID_STATUS, ApprovalQueue
 from .collect import collect
 from .config import Config, is_termux
+from .history import append_history, render_trend_text, summarize_trend
 from .render_html import write_dashboard
 from .render_markdown import render_digest
 
@@ -130,6 +133,22 @@ def cmd_approvals(args: argparse.Namespace) -> int:
         print(f"added {item.id} [{item.status}] ({item.risk_level}) {item.title}")
         print("note: this only records the request — nothing is executed.")
         return 0
+    if args.approvals_cmd == "show":
+        try:
+            print(queue.render_detail(args.id), end="")
+        except KeyError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        return 0
+    if args.approvals_cmd == "script":
+        try:
+            path = queue.write_script(args.id, cfg.action_scripts_dir)
+        except (KeyError, ValueError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        print("note: script was written for manual execution only; Hermes-OS did not run it.")
+        print(f"wrote {path}")
+        return 0
     if args.approvals_cmd == "set":
         try:
             item = queue.set_status(args.id, args.status)
@@ -138,8 +157,70 @@ def cmd_approvals(args: argparse.Namespace) -> int:
             return 2
         print(f"{item.id} → {item.status} (record-keeping only; nothing executed)")
         return 0
-    print("usage: hermes-os approvals {list,add,set}", file=sys.stderr)
+    print("usage: hermes-os approvals {list,add,show,script,set}", file=sys.stderr)
     return 2
+
+
+def cmd_history(args: argparse.Namespace) -> int:
+    cfg = _cfg()
+    if args.history_cmd == "append":
+        inv = collect(cfg)
+        entry = append_history(cfg, inv)
+        print(f"appended {cfg.history_file}")
+        print(
+            "latest: cron_failing={cron} approvals_pending={appr} kanban_blocked={blocked} active_agents={agents}".format(
+                cron=entry.get("cron_failing", 0),
+                appr=entry.get("approvals_pending", 0),
+                blocked=entry.get("kanban_blocked", 0),
+                agents=entry.get("active_agents", 0),
+            )
+        )
+        return 0
+    print("usage: hermes-os history append", file=sys.stderr)
+    return 2
+
+
+def cmd_trend(_args: argparse.Namespace) -> int:
+    cfg = _cfg()
+    print(render_trend_text(summarize_trend(cfg.history_file)), end="")
+    return 0
+
+
+def cmd_apply(args: argparse.Namespace) -> int:
+    cfg = _cfg()
+    guard = GuardedApply(cfg)
+    result = guard.apply(
+        args.id,
+        dry_run=not args.execute,
+        max_age_hours=args.max_age_hours,
+    )
+    if result.status == "dry-run":
+        print(f"DRY RUN {result.approval_id}")
+        print(f"would run: {result.command}")
+        print(f"log: {cfg.apply_log_file}")
+        print("validated only; use --execute for guarded execution")
+        return 0
+    if result.status == "refused":
+        print(f"REFUSED {result.approval_id}")
+        print(result.reason)
+        print(f"log: {cfg.apply_log_file}")
+        return 2
+    if result.status == "executed":
+        print(f"EXECUTED {result.approval_id} rc={result.returncode}")
+        if result.stdout:
+            print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+        if result.stderr:
+            print(result.stderr, end="" if result.stderr.endswith("\n") else "\n")
+        print(f"log: {cfg.apply_log_file}")
+        return 0
+    print(f"FAILED {result.approval_id} rc={result.returncode}")
+    print(result.reason)
+    if result.stdout:
+        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+    if result.stderr:
+        print(result.stderr, end="" if result.stderr.endswith("\n") else "\n")
+    print(f"log: {cfg.apply_log_file}")
+    return 1
 
 
 def cmd_doctor(_args: argparse.Namespace) -> int:
@@ -212,7 +293,7 @@ def cmd_version(_args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="hermes-os",
-        description="Phone-first, read-only control plane for a Hermes Agent setup.",
+        description="Phone-first observe/propose control plane with Guarded Apply for a Hermes Agent setup.",
     )
     sub = parser.add_subparsers(dest="cmd")
 
@@ -242,7 +323,24 @@ def build_parser() -> argparse.ArgumentParser:
     p_set = appr_sub.add_parser("set", help="update an item's status (record-keeping only)")
     p_set.add_argument("id")
     p_set.add_argument("status", choices=VALID_STATUS)
+    p_show = appr_sub.add_parser("show", help="show one approval with command/rollback detail")
+    p_show.add_argument("id")
+    p_script = appr_sub.add_parser("script", help="write a manual one-shot action script; never executes it")
+    p_script.add_argument("id")
     p_appr.set_defaults(func=cmd_approvals)
+
+    p_hist = sub.add_parser("history", help="local audit-trail snapshots")
+    hist_sub = p_hist.add_subparsers(dest="history_cmd")
+    hist_sub.add_parser("append", help="append one compact inventory summary")
+    p_hist.set_defaults(func=cmd_history)
+
+    sub.add_parser("trend", help="summarize the local audit-trail history").set_defaults(func=cmd_trend)
+
+    p_apply = sub.add_parser("apply", help="Guarded Apply v0.1: dry-run by default; allowlisted execution only")
+    p_apply.add_argument("id", help="approval id")
+    p_apply.add_argument("--execute", action="store_true", help="execute after all guards pass; default is dry-run")
+    p_apply.add_argument("--max-age-hours", type=float, default=DEFAULT_MAX_APPROVAL_AGE_HOURS)
+    p_apply.set_defaults(func=cmd_apply)
 
     sub.add_parser("doctor", help="self-checks; reports missing paths/tools").set_defaults(func=cmd_doctor)
     sub.add_parser("version", help="print version").set_defaults(func=cmd_version)
@@ -257,6 +355,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if args.cmd == "approvals" and not getattr(args, "approvals_cmd", None):
         parser.parse_args(["approvals", "--help"])
+        return 2
+    if args.cmd == "history" and not getattr(args, "history_cmd", None):
+        parser.parse_args(["history", "--help"])
         return 2
     return args.func(args)
 

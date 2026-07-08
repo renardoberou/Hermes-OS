@@ -28,6 +28,8 @@ from . import __version__
 from .approvals import ApprovalQueue
 from .config import Config, is_termux
 from .cron import job_counts, parse_scheduler_status, read_jobs, upcoming
+from .history import summarize_trend
+from .kanban import collect_kanban
 from .models import DiskUsage, HealthCheck, Inventory, Risk
 from .profiles import discover_config_profiles, merge_profiles, parse_profile_list
 from .redact import redact_text
@@ -449,6 +451,7 @@ def collect(cfg: Optional[Config] = None) -> Inventory:
             "cron_list": [cfg.hermes_bin, "cron", "list", "--all"],
             "tools_list": [cfg.hermes_bin, "tools", "list"],
             "gateway_status": [cfg.hermes_bin, "gateway", "status"],
+            "processes": ["ps", "-ef"],
         }.items():
             out, err = run_safe_command(args, timeout=cfg.cmd_timeout)
             probes[key] = out
@@ -515,10 +518,35 @@ def collect(cfg: Optional[Config] = None) -> Inventory:
         "file": str(cfg.approvals_file),
         "counts": queue.counts(),
         "pending": queue.pending_preview(),
+        "approved": [a.to_dict() for a in queue.list(status="approved")[:8]],
+    }
+
+    # ---- Action Center -----------------------------------------------------------
+    inv.action_center = {
+        "approval_file": str(cfg.approvals_file),
+        "action_scripts_dir": str(cfg.action_scripts_dir),
+        "history_file": str(cfg.history_file),
+        "apply_log_file": str(cfg.apply_log_file),
+        "audit_trend": summarize_trend(cfg.history_file),
+        "guarded_apply": {
+            "enabled": True,
+            "status": "available",
+            "version": "Guarded Apply v0.1",
+            "reason": "Guarded Apply v0.1 is dry-run by default, executes only approved non-stale low/medium-risk allowlisted commands with rollback metadata, and records a hash-chained local action log.",
+            "allowed_commands": [
+                "hermes-os status",
+                "hermes-os trend",
+                "hermes-os history append",
+                "hermes-os render-html",
+            ],
+        },
     }
 
     # ---- Today / daybook ------------------------------------------------------------
     inv.today = _collect_today(inv, cfg)
+
+    # ---- Kanban / live agents -------------------------------------------------------
+    inv.kanban = collect_kanban(cfg, probes.get("processes", ""))
 
     # ---- Skills / automations ------------------------------------------------------
     lanes: dict[str, list[str]] = {}
@@ -662,6 +690,16 @@ def _suggest_next_actions(inv: Inventory) -> None:
             title = item.get("title") or item.get("kind", "action")
             kind = item.get("kind", "action")
             actions.append(f"{kind}: {title}")
+    kanban = inv.kanban or {}
+    active_agents = kanban.get("active_agents", [])
+    blocked = int((kanban.get("counts") or {}).get("blocked", 0) or 0)
+    running = int((kanban.get("counts") or {}).get("running", 0) or 0)
+    if active_agents:
+        actions.append(f"Monitor {len(active_agents)} live agent(s) in the Kanban / live agents section.")
+    if blocked:
+        actions.append(f"Review {blocked} blocked Kanban task(s).")
+    elif running:
+        actions.append(f"Kanban has {running} running task(s); check heartbeat if they stay running too long.")
     if not actions:
         actions.append("All clear. Regenerate the dashboard (`hermes-os render-html`) if you want a fresh view.")
     inv.next_actions = actions

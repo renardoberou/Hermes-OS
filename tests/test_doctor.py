@@ -141,6 +141,49 @@ class TestCliCommands(unittest.TestCase):
                 code, out = run_cli("approvals", "list", "--status", "approved")
                 self.assertIn(item_id, out)
 
+    def test_approvals_show_and_script_via_cli(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self._fixture_env(Path(tmp)):
+                code, out = run_cli(
+                    "approvals",
+                    "add",
+                    "--title",
+                    "Refresh Hermes-OS dashboard",
+                    "--kind",
+                    "dashboard-refresh",
+                    "--detail",
+                    "manual action script handoff",
+                    "--risk",
+                    "low",
+                    "--command",
+                    "hermes-os render-html",
+                    "--rollback",
+                    "delete generated dashboard mirror",
+                )
+                self.assertEqual(code, 0, out)
+                item_id = out.split()[1]
+                code, detail = run_cli("approvals", "show", item_id)
+                self.assertEqual(code, 0, detail)
+                self.assertIn("Suggested command", detail)
+                self.assertIn("hermes-os render-html", detail)
+                code, script_out = run_cli("approvals", "script", item_id)
+                self.assertEqual(code, 0, script_out)
+                self.assertIn("wrote", script_out)
+                script_path = Path(script_out.split()[-1])
+                self.assertTrue(script_path.exists())
+                self.assertIn("manual execution only", script_path.read_text(encoding="utf-8").lower())
+
+    def test_history_append_and_trend_via_cli(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self._fixture_env(Path(tmp)):
+                code, out = run_cli("history", "append")
+                self.assertEqual(code, 0, out)
+                self.assertIn("appended", out)
+                code, trend = run_cli("trend")
+                self.assertEqual(code, 0, trend)
+                self.assertIn("samples:", trend)
+                self.assertIn("latest cron failing", trend)
+
     def test_no_command_prints_help(self):
         code, out = run_cli()
         self.assertEqual(code, 2)

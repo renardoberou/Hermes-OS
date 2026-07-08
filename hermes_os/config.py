@@ -102,6 +102,34 @@ class Config:
         return self.state_dir / "approvals.json"
 
     @property
+    def action_scripts_dir(self) -> Path:
+        return self.dist_dir / "actions"
+
+    @property
+    def history_file(self) -> Path:
+        return self.state_dir / "history.jsonl"
+
+    @property
+    def apply_log_file(self) -> Path:
+        return self.state_dir / "apply-log.jsonl"
+
+    @property
+    def kanban_default_db(self) -> Path:
+        return self.hermes_home / "kanban.db"
+
+    @property
+    def kanban_root(self) -> Path:
+        return self.hermes_home / "kanban"
+
+    @property
+    def kanban_boards_dir(self) -> Path:
+        return self.kanban_root / "boards"
+
+    @property
+    def kanban_current_file(self) -> Path:
+        return self.kanban_root / "current"
+
+    @property
     def templates_dir(self) -> Path:
         return self.repo_root / "templates"
 
@@ -140,4 +168,9 @@ class Config:
             "errors_log": str(self.errors_log),
             "profiles_dir": str(self.profiles_dir),
             "approvals_file": str(self.approvals_file),
+            "action_scripts_dir": str(self.action_scripts_dir),
+            "history_file": str(self.history_file),
+            "kanban_default_db": str(self.kanban_default_db),
+            "kanban_boards_dir": str(self.kanban_boards_dir),
+            "kanban_current_file": str(self.kanban_current_file),
         }

@@ -65,6 +65,11 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         webView.setWebViewClient(new WebViewClient() {
             @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return request != null && handleDashboardUrl(request.getUrl());
+            }
+
+            @Override
             public void onReceivedError(WebView view, WebResourceRequest request, android.webkit.WebResourceError error) {
                 if (request == null || request.isForMainFrame()) {
                     Toast.makeText(MainActivity.this, "Live dashboard unavailable; showing bundled snapshot", Toast.LENGTH_LONG).show();
@@ -121,10 +126,39 @@ public class MainActivity extends Activity {
     }
 
     private void copyShellCommandToClipboard() {
+        copyTextToClipboard("Hermes OS shell command", SHELL_COMMAND);
+        Toast.makeText(this, "Shell command copied. Paste in Termux.", Toast.LENGTH_LONG).show();
+    }
+
+    private boolean handleDashboardUrl(Uri uri) {
+        if (uri == null || !"hermesos".equals(uri.getScheme())) return false;
+        String action = uri.getHost();
+        String text = uri.getQueryParameter("text");
+        String cmd = uri.getQueryParameter("cmd");
+        String payload = cmd != null && cmd.length() > 0 ? cmd : text;
+        if (payload == null || payload.length() == 0) {
+            Toast.makeText(this, "No command/text attached to this action", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+        if ("copy".equals(action)) {
+            copyTextToClipboard("Hermes OS action", payload);
+            Toast.makeText(this, "Copied action to clipboard", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+        if ("termux".equals(action)) {
+            copyTextToClipboard("Hermes OS Termux command", payload);
+            Toast.makeText(this, "Command copied. Paste in Termux; nothing was run.", Toast.LENGTH_LONG).show();
+            openTermux();
+            return true;
+        }
+        Toast.makeText(this, "Unknown Hermes OS action: " + action, Toast.LENGTH_SHORT).show();
+        return true;
+    }
+
+    private void copyTextToClipboard(String label, String text) {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (clipboard != null) {
-            clipboard.setPrimaryClip(ClipData.newPlainText("Hermes OS shell command", SHELL_COMMAND));
-            Toast.makeText(this, "Shell command copied. Paste in Termux.", Toast.LENGTH_LONG).show();
+            clipboard.setPrimaryClip(ClipData.newPlainText(label, text));
         }
     }
 
