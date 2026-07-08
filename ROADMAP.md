@@ -26,6 +26,12 @@ Read-only inventory with health/risk derivation; `status`, `collect --json`, `di
 
 **Guarded Apply v0.1.** `hermes-os apply <id>` is dry-run by default; `--execute` is allowed only for approved, non-stale, low/medium-risk approvals with rollback metadata and a command matching the exact allowlist. Every attempt writes `apply-log.jsonl` with a hash chain. No arbitrary shell, no gateway ownership changes, no credentials, no profile/memory mutation.
 
+## v0.4 — Native Decision Bridge, shipped
+
+**Active Android surface.** Dashboard buttons now use structured `hermesos://decision`, `hermesos://apply`, and `hermesos://system` links. The Android WebView shell maps ids/verbs to exact `hermes-os action ...` argv arrays via Termux RUN_COMMAND; URLs never carry arbitrary shell.
+
+**Action receipts and feedback.** `hermes-os action <id> --verb approve|reject|dry-run|execute|done` and `hermes-os action system --verb refresh` write `action-receipts.jsonl`, refresh dashboard output best-effort, and surface a Last action banner. Missing RUN_COMMAND permission falls back to copy/open-Termux.
+
 ## v1 — broader guarded write paths, approval-first
 
 **Expanded guarded apply.** Future candidates may add structured cron-change proposals and other reversible local writes after v0.1 logs have been reviewed. Scope must remain allowlisted and rollback-backed.

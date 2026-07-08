@@ -10,14 +10,15 @@ Exactly one: the operator. This shapes everything — no auth, no multi-tenancy,
 
 ## Product
 
-A local CLI, `hermes-os`, with three renderings of one read-mostly inventory, plus observe/propose artifacts and a deliberately narrow guarded-apply gate:
+A local CLI, `hermes-os`, with three renderings of one read-mostly inventory, observe/propose artifacts, a deliberately narrow guarded-apply gate, and a native Android decision bridge for structured button actions:
 
 1. **`status`** — the terminal answer to "is it alive": health checks, risk list, next actions.
 2. **`digest`** — the same inventory compressed into a Telegram-friendly Markdown message opening with `Aye, Captain — Hermes Android Agentic OS status`.
 3. **`render-html`** — a static, phone-first dashboard (`dist/index.html`) with sections for Now, Daybook, Kanban/live agents, Health, Cron jobs, Profiles, Approvals, Action Center, LLM-Wiki, Skills/Automations, Projects, Risks, and Next actions.
-4. **`approvals`** — a local queue file recording proposed changes (title, kind, detail, risk level, status, optional suggested command and rollback). The product records, displays, and can write a manual script. In the Android shell, dashboard chips copy/open Termux commands for manual execution only.
-5. **`history` / `trend`** — compact local JSONL audit snapshots and terminal trend summaries.
-6. **`apply`** — Guarded Apply v0.1: dry-run by default; `--execute` requires approved status, non-stale timestamp, low/medium risk, rollback metadata, exact allowlist match, and writes a hash-chained local action log.
+4. **`approvals`** — a local queue file recording proposed changes (title, kind, detail, risk level, status, optional suggested command and rollback). The product records, displays, and can write a manual script.
+5. **`action`** — Native Decision Bridge v0.4.0: `action <id> --verb approve|reject|dry-run|execute|done` plus `action system --verb refresh`, used by Android buttons and recorded in `action-receipts.jsonl`.
+6. **`history` / `trend`** — compact local JSONL audit snapshots and terminal trend summaries.
+7. **`apply`** — Guarded Apply v0.1: dry-run by default; `--execute` requires approved status, non-stale timestamp, low/medium risk, rollback metadata, exact allowlist match, and writes a hash-chained local action log.
 
 Supporting commands: `collect --json` (the raw normalized inventory, for piping into other lanes) and `doctor` (environment self-check that reports rather than crashes).
 
@@ -27,7 +28,7 @@ Supporting commands: `collect --json` (the raw normalized inventory, for piping 
 
 ## Hard constraints
 
-Android/Termux runtime; Python stdlib + POSIX shell + static HTML only; no paid services; no laptop-only workflows; no Docker/systemd/desktop-browser assumptions. No credential is ever read, printed, or requested — `.env` files, token files, and session transcripts are out of bounds by construction, and everything that *is* read passes a tested redaction layer. Live Hermes profiles/memory/gateway state is never modified, and no second Telegram gateway is ever started: there is one gateway owner, and this product is not it. Writes are limited to Hermes-OS state/output files plus the narrow Guarded Apply v0.1 allowlist.
+Android/Termux runtime; Python stdlib + POSIX shell + static HTML only; no paid services; no laptop-only workflows; no Docker/systemd/desktop-browser assumptions. No credential is ever read, printed, or requested — `.env` files, token files, and session transcripts are out of bounds by construction, and everything that *is* read passes a tested redaction layer. Live Hermes profiles/memory/gateway state is never modified, and no second Telegram gateway is ever started: there is one gateway owner, and this product is not it. Writes are limited to Hermes-OS state/output files, structured approval status transitions, action receipts, and the narrow Guarded Apply v0.1 allowlist.
 
 ## Success criteria (v0 acceptance)
 

@@ -106,7 +106,10 @@ li:last-child{border-bottom:0}
   text-decoration:none;font-size:12px;line-height:20px;
 }
 .tap:active{background:rgba(255,180,84,.22);transform:translateY(1px)}
+.tap.ok{color:var(--ok);border-color:var(--ok);background:rgba(143,214,143,.08)}
+.tap.danger{color:var(--risk);border-color:var(--risk);background:rgba(255,107,87,.08)}
 .tap.dim{color:var(--dim);background:transparent}
+.notice{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:9px 0 10px;background:rgba(255,180,84,.06)}
 .pill{
   display:inline-block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
   border:1px solid;border-radius:999px;padding:0 7px;margin-left:6px;vertical-align:1px;
@@ -136,7 +139,7 @@ a{color:var(--amber)}
 </header>
 <main class="wrap">
 {{SECTIONS}}
-<footer>observe/propose · tap chips copy/open Termux; no command is auto-run<br>
+<footer>observe/propose/apply · structured buttons dispatch through the native Decision Bridge<br>
 <a href="llm-wiki-graph.html">open LLM-Wiki graph view</a><br>
 <span class="rule">─────</span> hermes-os v{{VERSION}} <span class="rule">─────</span></footer>
 </main>
@@ -186,6 +189,17 @@ def _app_link(action: str, label: str, *, text: str = "", cmd: str = "", css: st
     if cmd:
         params.append("cmd=" + quote(cmd))
     href = f"hermesos://{action}" + ("?" + "&".join(params) if params else "")
+    return f'<a class="{_e(css)}" href="{_e(href)}">{_e(label)}</a>'
+
+
+def _bridge_link(action: str, label: str, *, css: str = "tap", **params: str) -> str:
+    """Return a structured Native Decision Bridge link.
+
+    These links carry ids/verbs only. The Android app maps them to exact argv
+    arrays; no shell command is accepted from the URL.
+    """
+    query = "&".join(f"{quote(str(k))}={quote(str(v))}" for k, v in params.items() if str(v))
+    href = f"hermesos://{action}" + ("?" + query if query else "")
     return f'<a class="{_e(css)}" href="{_e(href)}">{_e(label)}</a>'
 
 
@@ -397,6 +411,8 @@ def _sec_approvals(inv: Inventory) -> str:
         pill = _pill("risk" if risk == "high" else "warn" if risk == "medium" else "ok")
         item_id = str(a.get("id", ""))
         row_actions = _tap_actions([
+            _bridge_link("decision", "Approve", id=item_id, verb="approve", css="tap ok"),
+            _bridge_link("decision", "Reject", id=item_id, verb="reject", css="tap danger"),
             _app_link("termux", "Show", cmd=f"hermes-os approvals show {item_id}"),
             _app_link("copy", "Copy script cmd", text=f"hermes-os approvals script {item_id}"),
         ]) if item_id else ""
@@ -418,24 +434,66 @@ def _sec_action_center(inv: Inventory) -> str:
     trend = action.get("audit_trend", {}) or {}
     latest = trend.get("latest", {}) or {}
     guarded = action.get("guarded_apply", {}) or {}
+    bridge = action.get("decision_bridge", {}) or {}
+    last = action.get("last_action", {}) or {}
     guarded_status = guarded.get("status", "deferred")
     guarded_pill = _pill("ok" if guarded.get("enabled") else "warn")
+    bridge_status = bridge.get("status", "unavailable")
+    bridge_pill = _pill("ok" if bridge.get("enabled") else "warn")
     head = _kv([
         ("audit samples", _e(trend.get("samples", 0))),
         ("latest cron failing", _e(latest.get("cron_failing", "—"))),
         ("latest approvals pending", _e(latest.get("approvals_pending", "—"))),
         ("latest active agents", _e(latest.get("active_agents", "—"))),
+        ("decision bridge", _e(bridge_status) + bridge_pill),
         ("guarded apply", _e(guarded_status) + guarded_pill),
     ])
     script_dir = action.get("action_scripts_dir", "")
     history_file = action.get("history_file", "")
     apply_log_file = action.get("apply_log_file", "")
+    receipt_file = action.get("action_receipts_file", "")
+    public_file = action.get("public_dashboard_file", "")
     quick_actions = _tap_actions([
+        _bridge_link("system", "Refresh", verb="refresh", css="tap ok"),
         _app_link("termux", "Status", cmd="hermes-os status"),
         _app_link("termux", "Trend", cmd="hermes-os trend"),
-        _app_link("termux", "Refresh dashboard", cmd="hermes-os render-html"),
         _app_link("copy", "Copy mirror path", text="/storage/emulated/0/Documents/HermesOS/index.html"),
     ])
+
+    last_html = ""
+    if last:
+        bits = [
+            f"{last.get('timestamp', '—')}",
+            f"{last.get('verb', '—')} {last.get('object_id', '')}".strip(),
+            f"status {last.get('status', '—')}",
+        ]
+        if last.get("reason"):
+            bits.append(str(last.get("reason"))[:160])
+        last_html = (
+            '<div class="notice"><span class="row-title">Last action</span>'
+            f'<span class="row-sub">{_e(" · ".join(str(b) for b in bits if b))}</span></div>'
+        )
+    else:
+        last_html = '<div class="notice"><span class="row-title">Last action</span><span class="row-sub">no native button action recorded yet</span></div>'
+
+    pending = inv.approvals.get("pending", []) or []
+    pending_items = []
+    for a in pending[:6]:
+        item_id = str(a.get("id", ""))
+        if not item_id:
+            continue
+        pending_items.append(
+            f'<span class="row-title">{_e(a.get("title", item_id))}</span>{_pill("warn")}'
+            f'<span class="row-sub">pending · {_e(item_id)} · risk {_e(a.get("risk_level", "medium"))} · dry-run/execute are guarded and will refuse until approved</span>'
+            + _tap_actions([
+                _bridge_link("decision", "Approve", id=item_id, verb="approve", css="tap ok"),
+                _bridge_link("decision", "Reject", id=item_id, verb="reject", css="tap danger"),
+                _bridge_link("apply", "Dry run", id=item_id, mode="dry-run", css="tap ok"),
+                _bridge_link("apply", "Execute", id=item_id, mode="execute", css="tap danger"),
+                _app_link("termux", "Show", cmd=f"hermes-os approvals show {item_id}"),
+            ])
+        )
+
     approved = inv.approvals.get("approved", []) or []
     apply_items = []
     for a in approved[:6]:
@@ -444,28 +502,35 @@ def _sec_action_center(inv: Inventory) -> str:
             continue
         apply_items.append(
             f'<span class="row-title">{_e(a.get("title", item_id))}</span>{_pill("ok")}'
-            f'<span class="row-sub">approved · dry-run first: hermes-os apply {_e(item_id)} · execute: hermes-os apply {_e(item_id)} --execute</span>'
+            f'<span class="row-sub">approved · native dry-run/execute · {_e(item_id)}</span>'
             + _tap_actions([
-                _app_link("termux", "Dry run", cmd=f"hermes-os apply {item_id}"),
-                _app_link("copy", "Copy execute", text=f"hermes-os apply {item_id} --execute"),
+                _bridge_link("apply", "Dry run", id=item_id, mode="dry-run", css="tap ok"),
+                _bridge_link("apply", "Execute", id=item_id, mode="execute", css="tap danger"),
+                _bridge_link("decision", "Reject", id=item_id, verb="reject", css="tap danger"),
+                _bridge_link("decision", "Done", id=item_id, verb="done"),
             ])
         )
+
     items = [
-        quick_actions + f'<span class="row-title">Action scripts</span><span class="row-sub">{_e(script_dir or "dist/actions")}</span>',
+        quick_actions + f'<span class="row-title">Native Decision Bridge v0.4.0</span><span class="row-sub">structured buttons: Approve · Reject · Dry run · Execute · Refresh. URLs carry ids/verbs only, not shell commands.</span>',
+        f'<span class="row-title">Action receipts</span><span class="row-sub">{_e(receipt_file or "action-receipts.jsonl")}</span>',
+        f'<span class="row-title">Public dashboard mirror</span><span class="row-sub">{_e(public_file or "/storage/emulated/0/Documents/HermesOS/index.html")}</span>',
+        f'<span class="row-title">Action scripts</span><span class="row-sub">{_e(script_dir or "dist/actions")}</span>',
         f'<span class="row-title">Audit trail</span><span class="row-sub">{_e(history_file or "history.jsonl")}</span>',
         f'<span class="row-title">Apply log</span><span class="row-sub">{_e(apply_log_file or "apply-log.jsonl")}</span>',
-        '<span class="row-title">Approval detail</span><span class="row-sub">tap approval Show button, or run: hermes-os approvals show &lt;id&gt;</span>',
-        '<span class="row-title">Manual script handoff</span><span class="row-sub">tap Copy script cmd, or run: hermes-os approvals script &lt;id&gt;</span>',
-        '<span class="row-title">Guarded Apply v0.1</span><span class="row-sub">dry-run: hermes-os apply &lt;id&gt; · execute: hermes-os apply &lt;id&gt; --execute</span>',
+        '<span class="row-title">CLI bridge</span><span class="row-sub">hermes-os action &lt;id&gt; --verb approve|reject|dry-run|execute|done · hermes-os action system --verb refresh</span>',
+        '<span class="row-title">Guarded Apply v0.1</span><span class="row-sub">dry-run: hermes-os apply &lt;id&gt; · execute: hermes-os apply &lt;id&gt; --execute · execute still requires approval, freshness, rollback metadata, risk ceiling, and exact allowlist.</span>',
     ]
+    if pending_items:
+        items.append('<span class="row-title">Pending decisions</span>' + _ul(pending_items, "no pending decisions"))
     if apply_items:
         items.append('<span class="row-title">Approved apply candidates</span>' + _ul(apply_items, "no approved apply candidates"))
     allowed = guarded.get("allowed_commands", []) or []
     if allowed:
         items.append('<span class="row-title">Allowlist</span><span class="row-sub">' + _e(" · ".join(str(x) for x in allowed)) + '</span>')
-    reason = guarded.get("reason", "guarded apply metadata unavailable")
-    items.append(f'<span class="row-title">Guard policy</span><span class="row-sub">{_e(reason)}</span>')
-    return _section("8 · Action Center", head + _ul(items, "no action-center metadata"))
+    reason = bridge.get("reason") or guarded.get("reason", "guarded apply metadata unavailable")
+    items.append(f'<span class="row-title">Bridge policy</span><span class="row-sub">{_e(reason)}</span>')
+    return _section("8 · Action Center", head + last_html + _ul(items, "no action-center metadata"))
 
 
 def _sec_wiki(inv: Inventory) -> str:

@@ -12,6 +12,7 @@ One pipeline, three renderings, and guarded side-files:
   │ ~/.hermes/profiles/*/config.yaml (allowlist)  │   │  hermes-android- │
   │ `hermes` CLI probes (safe commands)           │   │ history.jsonl    │
   │ LLM-Wiki structural files                     │   │ apply-log.jsonl  │
+  │ Native Decision Bridge verbs                  │   │ receipts.jsonl   │
   │ Guarded Apply exact allowlist                 │   └────────┬─────────┘
   │ shutil.disk_usage                             │            │
   └───────────────┬───────────────────────────────┘            │
@@ -19,7 +20,7 @@ One pipeline, three renderings, and guarded side-files:
    cron.py  profiles.py  wiki.py ── parsers, tolerant, pure     │
                   │                                             │
                   ▼                                             ▼
-             collect.py ──────────── redact.py ──────── approvals.py / apply.py
+             collect.py ──────────── redact.py ──────── approvals.py / actions.py / apply.py
                   │        (every string, on ingest)     (counts+preview
                   ▼                                       join inventory)
              models.Inventory  (normalized, already redacted)
@@ -38,7 +39,9 @@ One pipeline, three renderings, and guarded side-files:
 
 `approvals.py` owns the proposal queue. Writes are atomic (`tempfile` + `os.replace`) because a phone process can die at any moment. Its API has no execution path: adding/showing/marking/script-generation never runs a `suggested_command`.
 
-`apply.py` is the only execution gate. Guarded Apply v0.1 is deliberately narrow: approved status, fresh timestamp, low/medium risk, rollback metadata, exact command allowlist, `shell=False`, dry-run by default, and an append-only hash-chained `apply-log.jsonl`. Refusals are logged too.
+`apply.py` is the only guarded command execution gate. Guarded Apply v0.1 is deliberately narrow: approved status, fresh timestamp, low/medium risk, rollback metadata, exact command allowlist, `shell=False`, dry-run by default, and an append-only hash-chained `apply-log.jsonl`. Refusals are logged too.
+
+`actions.py` is the Native Decision Bridge. It accepts only structured verbs (`approve`, `reject`, `dry-run`, `execute`, `done`, `refresh`), maps them to exact Hermes-OS argv lists, writes hash-chained `action-receipts.jsonl`, and refreshes the dashboard best-effort. Android URLs carry ids/verbs only; arbitrary command strings are never executed.
 
 `cli.py` is thin dispatch: parse args, call collect/the queue/the guarded apply gate, hand the result to a renderer, choose an exit code.
 

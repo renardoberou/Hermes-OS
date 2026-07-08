@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import __version__
+from .actions import latest_receipt
 from .approvals import ApprovalQueue
 from .config import Config, is_termux
 from .cron import job_counts, parse_scheduler_status, read_jobs, upcoming
@@ -527,6 +528,16 @@ def collect(cfg: Optional[Config] = None) -> Inventory:
         "action_scripts_dir": str(cfg.action_scripts_dir),
         "history_file": str(cfg.history_file),
         "apply_log_file": str(cfg.apply_log_file),
+        "action_receipts_file": str(cfg.action_receipts_file),
+        "public_dashboard_file": str(cfg.public_dashboard_file),
+        "last_action": latest_receipt(cfg.action_receipts_file),
+        "decision_bridge": {
+            "enabled": True,
+            "status": "available",
+            "version": "Native Decision Bridge v0.4.0",
+            "reason": "Dashboard buttons dispatch structured Hermes-OS verbs through Android/Termux RUN_COMMAND; URLs never carry arbitrary shell.",
+            "verbs": ["approve", "reject", "dry-run", "execute", "done", "refresh"],
+        },
         "audit_trend": summarize_trend(cfg.history_file),
         "guarded_apply": {
             "enabled": True,

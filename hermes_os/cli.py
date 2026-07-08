@@ -9,6 +9,7 @@
                             [--risk low|medium|high]
                             [--command "..."] [--rollback "..."]
     hermes-os approvals set ID STATUS
+    hermes-os action ID --verb approve|reject|dry-run|execute|done|refresh
     hermes-os apply ID [--execute]
     hermes-os doctor
     hermes-os version
@@ -26,6 +27,7 @@ import sys
 from pathlib import Path
 
 from . import PRODUCT_NAME, __version__
+from .actions import ActionBridge
 from .apply import DEFAULT_MAX_APPROVAL_AGE_HOURS, GuardedApply
 from .approvals import VALID_RISK, VALID_STATUS, ApprovalQueue
 from .collect import collect
@@ -223,6 +225,28 @@ def cmd_apply(args: argparse.Namespace) -> int:
     return 1
 
 
+def cmd_action(args: argparse.Namespace) -> int:
+    """Native Decision Bridge: structured verbs for Android buttons."""
+    cfg = _cfg()
+    result = ActionBridge(cfg).dispatch(args.id, args.verb, source=args.source)
+    label = "DRY RUN" if result.status == "dry-run" else result.status.upper()
+    print(f"{label} {result.object_id} verb={result.verb}")
+    if result.command:
+        print("command: " + " ".join(result.command))
+    if result.reason:
+        print(result.reason)
+    if result.stdout:
+        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+    if result.stderr:
+        print(result.stderr, end="" if result.stderr.endswith("\n") else "\n")
+    print(f"receipt: {cfg.action_receipts_file}")
+    if result.status in {"ok", "dry-run", "executed"}:
+        return 0
+    if result.status == "failed":
+        return 1
+    return 2
+
+
 def cmd_doctor(_args: argparse.Namespace) -> int:
     cfg = _cfg()
     failures = 0
@@ -293,7 +317,7 @@ def cmd_version(_args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="hermes-os",
-        description="Phone-first observe/propose control plane with Guarded Apply for a Hermes Agent setup.",
+        description="Phone-first active decision interface with Native Decision Bridge and Guarded Apply.",
     )
     sub = parser.add_subparsers(dest="cmd")
 
@@ -341,6 +365,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_apply.add_argument("--execute", action="store_true", help="execute after all guards pass; default is dry-run")
     p_apply.add_argument("--max-age-hours", type=float, default=DEFAULT_MAX_APPROVAL_AGE_HOURS)
     p_apply.set_defaults(func=cmd_apply)
+
+    p_action = sub.add_parser("action", help="Native Decision Bridge v0.4.0 structured button action")
+    p_action.add_argument("id", help="approval id, or 'system' for refresh")
+    p_action.add_argument("--verb", required=True, help="approve|reject|dry-run|execute|done|refresh")
+    p_action.add_argument("--source", default="cli", help="receipt source label, e.g. android-shell")
+    p_action.set_defaults(func=cmd_action)
 
     sub.add_parser("doctor", help="self-checks; reports missing paths/tools").set_defaults(func=cmd_doctor)
     sub.add_parser("version", help="print version").set_defaults(func=cmd_version)

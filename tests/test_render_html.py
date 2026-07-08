@@ -78,7 +78,7 @@ class TestDashboard(unittest.TestCase):
         self.assertIn("Live agents", self.html)
         self.assertIn("Boards", self.html)
         self.assertIn("Action scripts", self.html)
-        self.assertIn("tap chips copy/open Termux", self.html)
+        self.assertIn("structured buttons dispatch", self.html)
         self.assertIn("hermesos://termux", self.html)
         self.assertIn("hermesos://copy", self.html)
         self.assertIn("Guarded Apply v0.1", self.html)

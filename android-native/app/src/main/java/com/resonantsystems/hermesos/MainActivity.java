@@ -25,12 +25,15 @@ public class MainActivity extends Activity {
     private static final String LIVE_PUBLIC_DASHBOARD = "file:///storage/emulated/0/Documents/HermesOS/index.html";
     private static final String LIVE_TERMUX_DASHBOARD = "/data/data/com.termux/files/home/hermes-android-agentic-os/dist/index.html";
     private static final String SHELL_COMMAND = "clear; ~/.local/bin/hermes-os status; echo; echo 'Dashboard mirror:'; echo '/storage/emulated/0/Documents/HermesOS/index.html'";
+    private static final String RUN_COMMAND_PERMISSION = "com.termux.permission.RUN_COMMAND";
+    private static final String HERMES_OS_PATH = "/data/data/com.termux/files/home/.local/bin/hermes-os";
     private WebView webView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestStoragePermissionIfNeeded();
+        requestRunCommandPermissionIfNeeded();
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -106,6 +109,12 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void requestRunCommandPermissionIfNeeded() {
+        if (android.os.Build.VERSION.SDK_INT >= 23 && checkSelfPermission(RUN_COMMAND_PERMISSION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{RUN_COMMAND_PERMISSION}, 8);
+        }
+    }
+
     private void loadLiveDashboard() {
         if (webView == null) return;
         webView.clearCache(true);
@@ -133,6 +142,9 @@ public class MainActivity extends Activity {
     private boolean handleDashboardUrl(Uri uri) {
         if (uri == null || !"hermesos".equals(uri.getScheme())) return false;
         String action = uri.getHost();
+        if ("decision".equals(action)) return handleDecisionUrl(uri);
+        if ("apply".equals(action)) return handleApplyUrl(uri);
+        if ("system".equals(action)) return handleSystemUrl(uri);
         String text = uri.getQueryParameter("text");
         String cmd = uri.getQueryParameter("cmd");
         String payload = cmd != null && cmd.length() > 0 ? cmd : text;
@@ -155,6 +167,65 @@ public class MainActivity extends Activity {
         return true;
     }
 
+    private boolean handleDecisionUrl(Uri uri) {
+        String id = uri.getQueryParameter("id");
+        String verb = uri.getQueryParameter("verb");
+        if (!isSafeId(id) || !("approve".equals(verb) || "reject".equals(verb) || "done".equals(verb))) {
+            Toast.makeText(this, "Refused invalid decision action", Toast.LENGTH_LONG).show();
+            return true;
+        }
+        runStructuredAction(id, verb);
+        return true;
+    }
+
+    private boolean handleApplyUrl(Uri uri) {
+        String id = uri.getQueryParameter("id");
+        String mode = uri.getQueryParameter("mode");
+        String verb = "execute".equals(mode) ? "execute" : "dry-run".equals(mode) ? "dry-run" : "";
+        if (!isSafeId(id) || verb.length() == 0) {
+            Toast.makeText(this, "Refused invalid apply action", Toast.LENGTH_LONG).show();
+            return true;
+        }
+        runStructuredAction(id, verb);
+        return true;
+    }
+
+    private boolean handleSystemUrl(Uri uri) {
+        String verb = uri.getQueryParameter("verb");
+        if (!"refresh".equals(verb)) {
+            Toast.makeText(this, "Refused invalid system action", Toast.LENGTH_LONG).show();
+            return true;
+        }
+        runStructuredAction("system", "refresh");
+        return true;
+    }
+
+    private boolean isSafeId(String value) {
+        return value != null && value.matches("[A-Za-z0-9._-]{1,80}");
+    }
+
+    private void runStructuredAction(String id, String verb) {
+        String[] args = new String[]{"action", id, "--verb", verb, "--source", "android-shell"};
+        if (!hasRunCommandPermission()) {
+            String fallback = "hermes-os action " + id + " --verb " + verb + " --source android-shell";
+            copyTextToClipboard("Hermes OS structured action", fallback);
+            Toast.makeText(this, "Grant Run commands in Termux environment. Action copied as fallback.", Toast.LENGTH_LONG).show();
+            openTermux();
+            return;
+        }
+        runTermuxCommand(HERMES_OS_PATH, args, true);
+        Toast.makeText(this, "Dispatched " + verb + " for " + id, Toast.LENGTH_SHORT).show();
+        if (webView != null) {
+            webView.postDelayed(new Runnable() {
+                @Override public void run() { loadLiveDashboard(); }
+            }, 2200);
+        }
+    }
+
+    private boolean hasRunCommandPermission() {
+        return android.os.Build.VERSION.SDK_INT < 23 || checkSelfPermission(RUN_COMMAND_PERMISSION) == PackageManager.PERMISSION_GRANTED;
+    }
+
     private void copyTextToClipboard(String label, String text) {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (clipboard != null) {
@@ -163,6 +234,10 @@ public class MainActivity extends Activity {
     }
 
     private void runTermuxCommand(String path, String[] args, boolean background) {
+        if (!hasRunCommandPermission()) {
+            Toast.makeText(this, "Missing Termux RUN_COMMAND permission", Toast.LENGTH_LONG).show();
+            return;
+        }
         Intent intent = new Intent("com.termux.RUN_COMMAND");
         intent.setClassName("com.termux", "com.termux.app.RunCommandService");
         intent.putExtra("com.termux.RUN_COMMAND_PATH", path);
@@ -173,7 +248,7 @@ public class MainActivity extends Activity {
         try {
             startService(intent);
         } catch (SecurityException e) {
-            Toast.makeText(this, "Enable Termux allow-external-apps / RUN_COMMAND", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Enable Termux allow-external-apps and grant Run commands permission", Toast.LENGTH_LONG).show();
         } catch (Exception e) {
             Toast.makeText(this, "Termux RUN_COMMAND service unavailable; opening Termux", Toast.LENGTH_LONG).show();
             openTermux();

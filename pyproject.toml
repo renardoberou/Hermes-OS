@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hermes-os"
-version = "0.3.0"
-description = "Phone-first observe/propose control plane with Guarded Apply for Hermes Agent on Android/Termux"
+version = "0.4.0"
+description = "Phone-first active decision interface with Native Decision Bridge and Guarded Apply for Hermes Agent on Android/Termux"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Renardo Berou / Resonant Systems" }]

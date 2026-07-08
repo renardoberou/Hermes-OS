@@ -84,7 +84,10 @@ li:last-child{border-bottom:0}
   text-decoration:none;font-size:12px;line-height:20px;
 }
 .tap:active{background:rgba(255,180,84,.22);transform:translateY(1px)}
+.tap.ok{color:var(--ok);border-color:var(--ok);background:rgba(143,214,143,.08)}
+.tap.danger{color:var(--risk);border-color:var(--risk);background:rgba(255,107,87,.08)}
 .tap.dim{color:var(--dim);background:transparent}
+.notice{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:9px 0 10px;background:rgba(255,180,84,.06)}
 .pill{
   display:inline-block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
   border:1px solid;border-radius:999px;padding:0 7px;margin-left:6px;vertical-align:1px;
@@ -114,7 +117,7 @@ a{color:var(--amber)}
 </header>
 <main class="wrap">
 {{SECTIONS}}
-<footer>observe/propose · tap chips copy/open Termux; no command is auto-run<br>
+<footer>observe/propose/apply · structured buttons dispatch through the native Decision Bridge<br>
 <a href="llm-wiki-graph.html">open LLM-Wiki graph view</a><br>
 <span class="rule">─────</span> hermes-os v{{VERSION}} <span class="rule">─────</span></footer>
 </main>

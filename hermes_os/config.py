@@ -114,6 +114,14 @@ class Config:
         return self.state_dir / "apply-log.jsonl"
 
     @property
+    def action_receipts_file(self) -> Path:
+        return self.state_dir / "action-receipts.jsonl"
+
+    @property
+    def public_dashboard_file(self) -> Path:
+        return Path("/storage/emulated/0/Documents/HermesOS/index.html")
+
+    @property
     def kanban_default_db(self) -> Path:
         return self.hermes_home / "kanban.db"
 
@@ -170,6 +178,9 @@ class Config:
             "approvals_file": str(self.approvals_file),
             "action_scripts_dir": str(self.action_scripts_dir),
             "history_file": str(self.history_file),
+            "apply_log_file": str(self.apply_log_file),
+            "action_receipts_file": str(self.action_receipts_file),
+            "public_dashboard_file": str(self.public_dashboard_file),
             "kanban_default_db": str(self.kanban_default_db),
             "kanban_boards_dir": str(self.kanban_boards_dir),
             "kanban_current_file": str(self.kanban_current_file),
