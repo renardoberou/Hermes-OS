@@ -182,7 +182,7 @@ class TestDecisionBridge(unittest.TestCase):
         approved = self._approval(status="approved")
         inv = collect(self.cfg)
         html = render_dashboard(inv)
-        self.assertIn("Native Decision Bridge v0.4.1", html)
+        self.assertIn("Native Decision Bridge v0.4.2", html)
         self.assertIn(f"hermesos://decision?id={pending.id}&amp;verb=approve", html)
         self.assertIn(f"hermesos://decision?id={pending.id}&amp;verb=reject", html)
         self.assertIn(f"hermesos://apply?id={approved.id}&amp;mode=dry-run", html)
@@ -211,6 +211,21 @@ class TestDecisionBridge(unittest.TestCase):
         self.assertIn("approval queued", result.reason)
         pending_titles = [a.title for a in self.queue.list(status="pending")]
         self.assertIn(candidate["title"], pending_titles)
+
+
+    def test_completed_derived_action_is_not_rendered_as_queueable_again(self):
+        inv = collect(self.cfg)
+        candidate = inv.action_center.get("derived_actions", [])[0]
+
+        queued = self.bridge.dispatch(candidate["id"], "queue", source="test")
+        self.assertEqual(queued.status, "ok", queued.reason)
+        self.bridge.dispatch(queued.object_id, "done", source="test")
+
+        refreshed = collect(self.cfg)
+        ids = [c.get("id") for c in refreshed.action_center.get("derived_actions", [])]
+        self.assertNotIn(candidate["id"], ids)
+        html = render_dashboard(refreshed)
+        self.assertNotIn(f"id={candidate['id']}&amp;verb=queue", html)
 
     def test_dashboard_renders_daybook_and_next_action_queue_buttons(self):
         inv = collect(self.cfg)

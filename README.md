@@ -6,7 +6,7 @@ This is not a generic agent wrapper. It is built around one specific operating s
 
 ## What it will and won't do
 
-It reads. It renders. It records. It writes only its own state (`approvals.json`, `history.jsonl`, `apply-log.jsonl`, `action-receipts.jsonl`, generated dashboard/action-script files). Native Decision Bridge v0.4.1 accepts structured verbs only (`approve`, `reject`, `queue`, `dry-run`, `execute`, `done`, `refresh`) and maps them to fixed Hermes-OS argv lists. Guarded Apply v0.1 may execute only approved, fresh, low/medium-risk commands from a narrow allowlist (`hermes-os status`, `trend`, `history append`, `render-html`); it never starts a second gateway, never edits profiles/memory/credentials, and never runs arbitrary shell. Everything ingested passes through a redaction layer that is itself under test.
+It reads. It renders. It records. It writes only its own state (`approvals.json`, `history.jsonl`, `apply-log.jsonl`, `action-receipts.jsonl`, generated dashboard/action-script files). Native Decision Bridge v0.4.2 accepts structured verbs only (`approve`, `reject`, `queue`, `dry-run`, `execute`, `done`, `refresh`) and maps them to fixed Hermes-OS argv lists. Guarded Apply v0.1 may execute only approved, fresh, low/medium-risk commands from a narrow allowlist (`hermes-os status`, `trend`, `history append`, `render-html`); it never starts a second gateway, never edits profiles/memory/credentials, and never runs arbitrary shell. Everything ingested passes through a redaction layer that is itself under test.
 
 ## Requirements
 
@@ -65,7 +65,7 @@ When you're deciding whether to change something: `hermes-os approvals add --tit
 
 For a fuller view: `hermes-os render-html`, then `termux-open dist/index.html`. The dashboard is a single static file styled for a phone screen — including **Now**, **Daybook**, **Kanban / live agents**, health, cron, approvals, **Action Center**, wiki queue, risks, and **Next actions** — so it also survives being copied anywhere (Downloads, the wiki's `_meta`, a browser bookmark).
 
-Action Center v0.2 adds the safe proposal layer: `approvals show <id>`, `approvals script <id>`, `history append`, and `trend`. Guarded Apply v0.1 adds `apply <id>` as a dry-run-first execution gate for a tiny local allowlist. Native Decision Bridge v0.4.1 makes the Android shell an active surface: dashboard buttons dispatch structured **Approve**, **Reject**, **Dry run**, **Execute**, **Done**, and **Refresh** verbs through Termux RUN_COMMAND, then receipts and refreshed dashboard output are written locally. If permission/setup is missing, the app falls back to copying the structured command and opening Termux.
+Action Center v0.2 adds the safe proposal layer: `approvals show <id>`, `approvals script <id>`, `history append`, and `trend`. Guarded Apply v0.1 adds `apply <id>` as a dry-run-first execution gate for a tiny local allowlist. Native Decision Bridge v0.4.2 makes the Android shell an active surface: dashboard buttons dispatch structured **Approve**, **Reject**, **Dry run**, **Execute**, **Done**, and **Refresh** verbs through Termux RUN_COMMAND, then receipts and refreshed dashboard output are written locally. If permission/setup is missing, the app falls back to copying the structured command and opening Termux.
 
 ## Configuration
 

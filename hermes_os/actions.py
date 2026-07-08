@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import uuid
 from dataclasses import asdict, dataclass
@@ -103,6 +104,25 @@ def derived_action_id(kind: str, title: str, source: str = "") -> str:
     """Stable URL-safe id for a dashboard-derived action candidate."""
     raw = f"{kind}|{title}|{source}".lower().encode("utf-8", "replace")
     return "drv-" + hashlib.sha256(raw).hexdigest()[:12]
+
+
+def queued_derived_candidate_ids(queue: ApprovalQueue) -> set[str]:
+    """Return derived candidate ids already represented in the approval queue.
+
+    Derived actions are source observations. Once a candidate is queued, approved,
+    rejected, or done, it should not keep rendering as a fresh queueable item.
+    """
+    ids: set[str] = set()
+    pattern = re.compile(r"candidate:\s*(drv-[a-f0-9]{12})")
+    for item in queue.load():
+        for match in pattern.finditer(item.detail or ""):
+            ids.add(match.group(1))
+    return ids
+
+
+def unqueued_action_candidates(candidates: list[dict], queue: ApprovalQueue) -> list[dict]:
+    handled = queued_derived_candidate_ids(queue)
+    return [c for c in candidates if str(c.get("id", "")) not in handled]
 
 
 def derive_action_candidates(inv) -> list[dict]:
@@ -307,6 +327,18 @@ class ActionBridge:
 
 
     def _queue_derived_action(self, action_id: str, object_id: str, command: list[str], source: str) -> ActionResult:
+        marker = f"candidate: {object_id}"
+        for item in self.queue.load():
+            if marker in (item.detail or ""):
+                return ActionResult(
+                    action_id=action_id,
+                    object_id=item.id,
+                    verb="queue",
+                    status="ok",
+                    source=source,
+                    command=command,
+                    reason=f"approval already queued as {item.id}",
+                )
         try:
             from .collect import collect
 

@@ -534,7 +534,7 @@ def _sec_action_center(inv: Inventory) -> str:
         )
 
     items = [
-        quick_actions + f'<span class="row-title">Native Decision Bridge v0.4.1</span><span class="row-sub">structured buttons: Approve · Reject · Dry run · Execute · Refresh. URLs carry ids/verbs only, not shell commands.</span>',
+        quick_actions + f'<span class="row-title">Native Decision Bridge v0.4.2</span><span class="row-sub">structured buttons: Approve · Reject · Dry run · Execute · Refresh. URLs carry ids/verbs only, not shell commands.</span>',
         f'<span class="row-title">Action receipts</span><span class="row-sub">{_e(receipt_file or "action-receipts.jsonl")}</span>',
         f'<span class="row-title">Public dashboard mirror</span><span class="row-sub">{_e(public_file or "/storage/emulated/0/Documents/HermesOS/index.html")}</span>',
         f'<span class="row-title">Action scripts</span><span class="row-sub">{_e(script_dir or "dist/actions")}</span>',

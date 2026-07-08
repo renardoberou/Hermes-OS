@@ -366,7 +366,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_apply.add_argument("--max-age-hours", type=float, default=DEFAULT_MAX_APPROVAL_AGE_HOURS)
     p_apply.set_defaults(func=cmd_apply)
 
-    p_action = sub.add_parser("action", help="Native Decision Bridge v0.4.1 structured button action")
+    p_action = sub.add_parser("action", help="Native Decision Bridge v0.4.2 structured button action")
     p_action.add_argument("id", help="approval id, or 'system' for refresh")
     p_action.add_argument("--verb", required=True, help="approve|reject|queue|dry-run|execute|done|refresh")
     p_action.add_argument("--source", default="cli", help="receipt source label, e.g. android-shell")

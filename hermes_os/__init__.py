@@ -5,5 +5,5 @@ handoff, and local audit trail for Hermes Agent on Android/Termux. Python
 stdlib only.
 """
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 PRODUCT_NAME = "Hermes-OS"

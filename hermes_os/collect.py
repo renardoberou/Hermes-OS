@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import __version__
-from .actions import derive_action_candidates, latest_receipt
+from .actions import derive_action_candidates, latest_receipt, unqueued_action_candidates
 from .approvals import ApprovalQueue
 from .config import Config, is_termux
 from .cron import job_counts, parse_scheduler_status, read_jobs, upcoming
@@ -534,7 +534,7 @@ def collect(cfg: Optional[Config] = None) -> Inventory:
         "decision_bridge": {
             "enabled": True,
             "status": "available",
-            "version": "Native Decision Bridge v0.4.1",
+            "version": "Native Decision Bridge v0.4.2",
             "reason": "Dashboard buttons dispatch structured Hermes-OS verbs through Android/Termux RUN_COMMAND; URLs never carry arbitrary shell.",
             "verbs": ["approve", "reject", "dry-run", "execute", "done", "refresh"],
         },
@@ -592,7 +592,7 @@ def collect(cfg: Optional[Config] = None) -> Inventory:
     # ---- Health + risks -----------------------------------------------------------------
     _derive_health_and_risks(inv, cfg)
     _suggest_next_actions(inv)
-    inv.action_center["derived_actions"] = derive_action_candidates(inv)
+    inv.action_center["derived_actions"] = unqueued_action_candidates(derive_action_candidates(inv), queue)
     inv.action_center["decision_bridge"]["verbs"] = ["approve", "reject", "queue", "dry-run", "execute", "done", "refresh"]
     return inv
 
