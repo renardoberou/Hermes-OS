@@ -6,7 +6,7 @@ import os
 import unittest
 from pathlib import Path
 
-from hermes_os.collect import collect, tail_file
+from hermes_os.collect import collect, run_safe_command, tail_file
 from hermes_os.config import Config
 from hermes_os.cron import job_counts, parse_scheduler_status, read_jobs, upcoming
 from hermes_os.profiles import (
@@ -135,6 +135,34 @@ class TestWiki(unittest.TestCase):
         status = collect_wiki(FIXTURES / "no-such-vault")
         self.assertFalse(status.exists)
         self.assertIsNone(status.note_count)
+
+
+class TestRunSafeCommand(unittest.TestCase):
+    def test_nonzero_command_keeps_stdout_out_of_traceback_body(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            cmd = tmp_path / "probe"
+            cmd.write_text(
+                "#!/bin/sh\n"
+                "printf 'Hermes Agent v9\\n'\n"
+                "printf 'Traceback secret-side-channel\\n' >&2\n"
+                "exit 1\n",
+                encoding="utf-8",
+            )
+            cmd.chmod(0o755)
+            old_path = os.environ.get("PATH", "")
+            os.environ["PATH"] = f"{tmp_path}{os.pathsep}{old_path}"
+            try:
+                out, err = run_safe_command(["probe"])
+            finally:
+                os.environ["PATH"] = old_path
+
+        self.assertEqual(out, "Hermes Agent v9")
+        self.assertIn("exited 1", err or "")
+        self.assertIn("Traceback", err or "")
+        self.assertNotIn("Traceback", out)
 
 
 class TestTailFile(unittest.TestCase):

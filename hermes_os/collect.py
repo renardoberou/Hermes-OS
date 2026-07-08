@@ -111,9 +111,14 @@ def run_safe_command(
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         return "", f"{' '.join(args)}: {exc.__class__.__name__}"
-    out = (proc.stdout or "") + (("\n" + proc.stderr) if proc.stderr else "")
+    stdout = proc.stdout or ""
+    stderr = proc.stderr or ""
     if proc.returncode != 0:
-        return redact_text(out.strip()), f"{' '.join(args)} exited {proc.returncode}"
+        # Some Hermes probes can print useful leading stdout and then fail while
+        # importing optional CLI paths. Keep display fields useful, but route
+        # stderr/tracebacks to warnings instead of polluting the dashboard body.
+        return redact_text(stdout.strip()), f"{' '.join(args)} exited {proc.returncode}: {redact_text(stderr.strip())[:240]}"
+    out = stdout + (("\n" + stderr) if stderr else "")
     return redact_text(out.strip()), None
 
 
